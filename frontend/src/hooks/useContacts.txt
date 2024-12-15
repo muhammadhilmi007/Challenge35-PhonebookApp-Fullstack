@@ -1,0 +1,74 @@
+import { useState, useEffect, useCallback } from 'react';
+import { api } from '../services/api';
+
+export const useContacts = () => {
+  const [contacts, setContacts] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [sortBy, setSortBy] = useState('name');
+  const [sortOrder, setSortOrder] = useState('asc');
+  const [search, setSearch] = useState('');
+
+  const handleAvatarUpdate = useCallback((contactId, newAvatar) => {
+    setContacts(prevContacts => prevContacts.map(contact => 
+      contact.id === contactId ? { ...contact, photo: newAvatar } : contact
+    ));
+  }, []);
+
+  const loadContacts = useCallback(async () => {
+    if (loading || !hasMore) return;
+
+    setLoading(true);
+    try {
+      const data = await api.getContacts(page, 10, sortBy, sortOrder, search);
+      
+      setContacts(prevContacts => {
+        const newContacts = data.phonebooks.filter(newContact => 
+          !prevContacts.some(existingContact => existingContact.id === newContact.id)
+        );
+        return [...prevContacts, ...newContacts];
+      });
+
+      setHasMore(data.page < data.pages);
+      setPage(prevPage => prevPage + 1);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, sortBy, sortOrder, search, loading, hasMore]);
+
+  // useEffect(() => {
+  //   setContacts([]);
+  //   setPage(1);
+  //   setHasMore(true);
+  // }, [search, sortBy, sortOrder]);
+
+  useEffect(() => {
+    loadContacts();
+  }, 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  [search, sortBy, sortOrder]);
+
+  return {
+    contacts,
+    loading,
+    error,
+    hasMore,
+    loadMore: loadContacts,
+    setSearch,
+    setSortBy,
+    setSortOrder,
+    handleAvatarUpdate,
+    refreshContacts: () => {
+      setContacts([]);
+      setPage(1);
+      setHasMore(true);
+      loadContacts();
+    }
+  };
+};
+
+export default useContacts;

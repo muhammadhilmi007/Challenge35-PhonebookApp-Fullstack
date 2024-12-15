@@ -3,7 +3,7 @@ import { api } from '../services/api';
 
 export const useContacts = () => {
   const [contacts, setContacts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -12,31 +12,36 @@ export const useContacts = () => {
   const [search, setSearch] = useState('');
 
   const loadContacts = useCallback(async (loadMore = false) => {
+    if (loading) return;
+
+    setLoading(true);
     try {
-      setLoading(true);
-      const data = await api.getContacts(
-        loadMore ? page + 1 : 1,
-        5,
-        sortBy,
-        sortOrder,
-        search
-      );
+      const newPage = loadMore ? page + 1 : 1;
+      const data = await api.getContacts(newPage, 10, sortBy, sortOrder, search);
+      
       setContacts(prev => loadMore ? [...prev, ...data.phonebooks] : data.phonebooks);
       setHasMore(data.page < data.pages);
-      setPage(loadMore ? p => p + 1 : 1);
+      setPage(newPage);
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, [page, sortBy, sortOrder, search]);
+  }, [loading, page, sortBy, sortOrder, search]);
 
   useEffect(() => {
+    setContacts([]);
+    setPage(1);
+    setHasMore(true);
     loadContacts();
-  }, [sortBy, sortOrder, search, loadContacts]);
+  }, 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  [sortBy, sortOrder, search]);
 
   const refreshContacts = useCallback(() => {
+    setContacts([]);
     setPage(1);
+    setHasMore(true);
     loadContacts();
   }, [loadContacts]);
 

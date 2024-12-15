@@ -20,11 +20,16 @@
 .add-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 15px;
+}
+
+@media screen and (max-width: 600px) {
+  .add-form {
+    gap: 10px;
+  }
 }
 
 .add-input {
-  width: 100%;
   padding: 12px;
   border: 2px solid #b8860b;
   border-radius: 4px;
@@ -67,11 +72,26 @@
   margin-bottom: 20px;
 }
 
-.search-bar input {
+.search-input-container {
   flex: 1;
-  padding: 10px;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  color: #666;
+  font-size: 16px;
+}
+
+.search-input-container input {
+  width: 100%;
+  padding: 10px 10px 10px 36px;
   border: 2px solid #b8860b;
   border-radius: 4px;
+  font-size: 14px;
 }
 
 .add-button {
@@ -84,6 +104,23 @@
 }
 
 .add-button:hover {
+  background-color: #9b7300;
+}
+
+.sort-button {
+  background-color: #b8860b;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+}
+
+.sort-button:hover {
   background-color: #9b7300;
 }
 
@@ -287,6 +324,9 @@
   align-items: center;
   gap: 15px;
   position: relative;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid #333;
 }
 
 .avatar {
@@ -403,6 +443,91 @@
   color: #333;
 }
 
+/* Mobile Styles (max-width: 600px) */
+@media screen and (max-width: 600px) {
+  .app {
+    padding: 10px;
+  }
+
+  .search-bar {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 8px;
+    margin-bottom: 15px;
+    align-items: center;
+  }
+
+  .search-input-container {
+    width: 100%;
+  }
+
+  .search-input-container input {
+    font-size: 14px;
+    padding: 8px 12px 8px 36px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    width: 100%;
+  }
+
+  .search-icon {
+    left: 12px;
+    font-size: 14px;
+  }
+
+  .sort-button,
+  .add-button {
+    padding: 8px;
+    font-size: 16px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #b8860b;
+    color: white;
+    border: none;
+    border-radius: 4px;
+  }
+
+  .contact-card {
+    background-color: #f5f5f5;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 8px;
+  }
+
+  .avatar {
+    width: 48px;
+    height: 48px;
+  }
+
+  .contact-info h3 {
+    font-size: 16px;
+    margin: 0 0 4px 0;
+  }
+
+  .contact-info p {
+    font-size: 14px;
+    margin: 0;
+    color: #666;
+  }
+
+  .contact-actions {
+    display: flex;
+    gap: 12px;
+  }
+
+  .contact-actions button {
+    padding: 8px;
+    font-size: 16px;
+  }
+
+  .edit-icon,
+  .delete-icon {
+    color: #666;
+  }
+}
+
 @media (max-width: 600px) {
   .contact-list {
     grid-template-columns: 1fr;
@@ -415,5 +540,61 @@
   .avatar-upload {
     max-width: 100%;
     margin: 10px;
+  }
+}
+
+.contact-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+  padding: 20px;
+  position: relative;
+}
+
+.loading-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  color: #666;
+}
+
+.spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 10px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Make sure the container allows scrolling */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+#root {
+  height: 100%;
+  overflow-y: auto;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .contact-list {
+    grid-template-columns: 1fr;
+    padding: 10px;
+  }
+  
+  .loading-indicator {
+    bottom: 10px;
+    padding: 8px 16px;
   }
 }

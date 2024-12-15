@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { api } from '../services/api';
 import AvatarUpload from './AvatarUpload';
 import { BsPencilSquare, BsTrash } from 'react-icons/bs';
 
@@ -27,7 +26,6 @@ const ContactCard = ({ contact, onEdit, onDelete, onAvatarUpdate }) => {
 
   const confirmDelete = async () => {
     try {
-      await api.deleteContact(contact.id);
       onDelete(contact.id);
     } catch (error) {
       console.error('Error deleting contact:', error);

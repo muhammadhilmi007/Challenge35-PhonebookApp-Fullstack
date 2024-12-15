@@ -32,6 +32,11 @@ const MainPage = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!id) {
+      console.error('No contact ID provided for deletion');
+      return;
+    }
+    
     try {
       await api.deleteContact(id);
       refreshContacts();
@@ -62,6 +67,7 @@ const MainPage = () => {
         onAvatarUpdate={refreshContacts}
         onLoadMore={loadMore}
         hasMore={hasMore}
+        loading={loading}
       />
       {loading && <div className="loading">Loading...</div>}
     </div>

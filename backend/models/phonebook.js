@@ -2,6 +2,11 @@ const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
 const Phonebook = sequelize.define('Phonebook', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
   name: {
     type: DataTypes.STRING,
     allowNull: false,
@@ -18,7 +23,7 @@ const Phonebook = sequelize.define('Phonebook', {
   },
   photo: {
     type: DataTypes.STRING,
-    defaultValue: 'https://via.placeholder.com/150'
+    defaultValue: '/user-avatar.svg'
   }
 });
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BsFillPersonPlusFill } from "react-icons/bs";
+import { BsFillPersonPlusFill, BsSearch } from "react-icons/bs";
 import { FaSortAlphaUpAlt, FaSortAlphaDownAlt } from "react-icons/fa";
 
 const SearchBar = ({ value, onChange, onSort, onAdd }) => {
@@ -13,15 +13,18 @@ const SearchBar = ({ value, onChange, onSort, onAdd }) => {
 
   return (
     <div className="search-bar">
-      <button onClick={handleSort} className="add-button">
+      <button onClick={handleSort} className="sort-button">
         {sortOrder === 'asc' ? <FaSortAlphaUpAlt /> : <FaSortAlphaDownAlt />}
       </button>
-      <input
-        type="text"
-        placeholder="Search contacts..."
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      />
+      <div className="search-input-container">
+        <BsSearch className="search-icon" />
+        <input
+          type="text"
+          placeholder="Search contacts..."
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      </div>
       <button className="add-button" onClick={onAdd}><BsFillPersonPlusFill /></button>
     </div>
   );
