@@ -1,0 +1,91 @@
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import SearchBar from './components/SearchBar';
+import ContactList from './components/ContactList';
+import AddContact from './components/AddContact';
+import { useContacts } from './hooks/useContacts';
+import { api } from './services/api';
+import './styles/styles.css';
+
+const MainPage = () => {
+  const navigate = useNavigate();
+  const {
+    contacts,
+    loading,
+    error,
+    hasMore,
+    search,
+    setSearch,
+    setSortBy,
+    setSortOrder,
+    loadMore,
+    refreshContacts
+  } = useContacts();
+
+  const handleEdit = async (id, updatedContact) => {
+    try {
+      await api.updateContact(id, updatedContact);
+      refreshContacts();
+    } catch (error) {
+      console.error('Error updating contact:', error);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await api.deleteContact(id);
+      refreshContacts();
+    } catch (error) {
+      console.error('Error deleting contact:', error);
+    }
+  };
+
+  const handleSort = (sortBy, sortOrder) => {
+    setSortBy(sortBy);
+    setSortOrder(sortOrder);
+  };
+
+  if (error) return <div className="error">Error: {error}</div>;
+
+  return (
+    <div className="app">
+      <SearchBar
+        value={search}
+        onChange={setSearch}
+        onSort={handleSort}
+        onAdd={() => navigate('/add')}
+      />
+      <ContactList
+        contacts={contacts}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onAvatarUpdate={refreshContacts}
+        onLoadMore={loadMore}
+        hasMore={hasMore}
+      />
+      {loading && <div className="loading">Loading...</div>}
+    </div>
+  );
+};
+
+const App = () => {
+  const handleAdd = async (contact) => {
+    try {
+      await api.addContact(contact);
+    } catch (error) {
+      console.error('Error adding contact:', error);
+      throw error;
+    }
+  };
+
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<MainPage />} />
+        <Route path="/add" element={<AddContact onAdd={handleAdd} />} />
+      </Routes>
+    </Router>
+  );
+};
+
+export default App;

@@ -1,0 +1,109 @@
+import * as chai from 'chai';
+import chaiHttp from 'chai-http';
+import app from '../server.js';
+import Phonebook from '../models/phonebook.js';
+
+chai.use(chaiHttp).request.execute(app);
+const { expect } = chai;
+
+describe('Phonebook API', () => {
+  beforeEach(async () => {
+    await Phonebook.destroy({ where: {} });
+  });
+
+  describe('GET /api/phonebooks', () => {
+    it('should get all contacts with pagination', async () => {
+      await Phonebook.bulkCreate([
+        { name: 'Test User 1', phone: '08123456781' },
+        { name: 'Test User 2', phone: '08123456782' }
+      ]);
+
+      const res = await chai.request(app)
+        .get('/api/phonebooks')
+        .query({ page: 1, limit: 5 });
+
+      expect(res).to.have.status(200);
+      expect(res.body).to.be.an('object');
+      expect(res.body.phonebooks).to.be.an('array').with.lengthOf(2);
+      expect(res.body).to.have.property('total', 2);
+    });
+
+    it('should search contacts by name or phone', async () => {
+      await Phonebook.bulkCreate([
+        { name: 'John Doe', phone: '08123456781' },
+        { name: 'Jane Smith', phone: '08123456782' }
+      ]);
+
+      const res = await chai.request(app)
+        .get('/api/phonebooks')
+        .query({ name: 'john' });
+
+      expect(res).to.have.status(200);
+      expect(res.body.phonebooks).to.have.lengthOf(1);
+      expect(res.body.phonebooks[0].name).to.equal('John Doe');
+    });
+  });
+
+  describe('POST /api/phonebooks', () => {
+    it('should create a new contact', async () => {
+      const contact = {
+        name: 'New User',
+        phone: '08123456789'
+      };
+
+      const res = await chai.request(app)
+        .post('/api/phonebooks')
+        .send(contact);
+
+      expect(res).to.have.status(201);
+      expect(res.body).to.be.an('object');
+      expect(res.body.name).to.equal(contact.name);
+      expect(res.body.phone).to.equal(contact.phone);
+    });
+
+    it('should not create contact without required fields', async () => {
+      const res = await chai.request(app)
+        .post('/api/phonebooks')
+        .send({});
+
+      expect(res).to.have.status(400);
+    });
+  });
+
+  describe('PUT /api/phonebooks/:id', () => {
+    it('should update an existing contact', async () => {
+      const contact = await Phonebook.create({
+        name: 'Test User',
+        phone: '08123456789'
+      });
+
+      const res = await chai.request(app)
+        .put(`/api/phonebooks/${contact.id}`)
+        .send({
+          name: 'Updated User',
+          phone: '08987654321'
+        });
+
+      expect(res).to.have.status(201);
+      expect(res.body.name).to.equal('Updated User');
+      expect(res.body.phone).to.equal('08987654321');
+    });
+  });
+
+  describe('DELETE /api/phonebooks/:id', () => {
+    it('should delete an existing contact', async () => {
+      const contact = await Phonebook.create({
+        name: 'Test User',
+        phone: '08123456789'
+      });
+
+      const res = await chai.request(app)
+        .delete(`/api/phonebooks/${contact.id}`);
+
+      expect(res).to.have.status(200);
+      
+      const deletedContact = await Phonebook.findByPk(contact.id);
+      expect(deletedContact).to.be.null;
+    });
+  });
+});
