@@ -1,12 +1,31 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 
-const AvatarUpload = ({ contactId, currentAvatar, onUpdate, onClose }) => {
+const AvatarUpload = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
   const [preview, setPreview] = useState(null);
+  const [currentAvatar, setCurrentAvatar] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef(null);
   const [dragOver, setDragOver] = useState(false);
+
+  useEffect(() => {
+    const fetchContact = async () => {
+      try {
+        const contact = await api.getContactById(id);
+        if (contact) {
+          setCurrentAvatar(contact.photo);
+        }
+      } catch (err) {
+        setError('Failed to fetch contact information');
+        console.error('Error fetching contact:', err);
+      }
+    };
+    fetchContact();
+  }, [id]);
 
   const handleFileSelect = useCallback((file) => {
     const validTypes = ['image/jpeg', 'image/png', 'image/jpg'];
@@ -68,15 +87,14 @@ const AvatarUpload = ({ contactId, currentAvatar, onUpdate, onClose }) => {
       const formData = new FormData();
       formData.append('photo', file);
 
-      const updatedContact = await api.updateAvatar(contactId, formData);
-      onUpdate(updatedContact);
-      onClose();
+      await api.updateAvatar(id, formData);
+      navigate('/');
     } catch (err) {
       setError('Failed to upload avatar. Please try again.');
     } finally {
       setUploading(false);
     }
-  }, [preview, contactId, onUpdate, onClose]);
+  }, [preview, id, navigate]);
 
   const openFileDialog = useCallback(() => {
     fileInputRef.current?.click();
@@ -92,73 +110,75 @@ const AvatarUpload = ({ contactId, currentAvatar, onUpdate, onClose }) => {
   }, []);
 
   return (
-    <div className="avatar-upload">
-      <div className="avatar-upload-header">
-        <h3>Update Profile Picture</h3>
-        <button className="close-button" onClick={onClose}>&times;</button>
-      </div>
+    <div className="avatar-upload-page">
+      <div className="avatar-upload-container">
+        <div className="avatar-upload-header">
+          <h3>Update Profile Picture</h3>
+          <button className="close-button" onClick={() => navigate('/')}>&times;</button>
+        </div>
 
-      <div 
-        className={`upload-area ${dragOver ? 'drag-over' : ''}`}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-      >
-        {preview ? (
-          <div className="preview-container">
-            <img 
-              src={preview} 
-              alt="Preview" 
-              className="avatar-preview"
-            />
-            <button 
-              className="change-image"
-              onClick={openFileDialog}
-            >
-              Change Image
-            </button>
-          </div>
-        ) : (
-          <div className="upload-placeholder">
-            <img 
-              src={currentAvatar || 'https://via.placeholder.com/150'} 
-              alt="Current avatar" 
-              className="current-avatar"
-            />
-            <p>Drag & drop an image here or</p>
-            <button onClick={openFileDialog}>Select File</button>
-            {/Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent) && (
-              <button onClick={handleCapture}>Take Photo</button>
-            )}
-          </div>
-        )}
-      </div>
-
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleFileInput}
-        accept="image/*"
-        style={{ display: 'none' }}
-      />
-
-      {error && <div className="error-message">{error}</div>}
-
-      <div className="upload-actions">
-        <button
-          className="upload-button"
-          onClick={handleUpload}
-          disabled={!preview || uploading}
+        <div 
+          className={`upload-area ${dragOver ? 'drag-over' : ''}`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
         >
-          {uploading ? 'Uploading...' : 'Upload Avatar'}
-        </button>
-        <button
-          className="cancel-button"
-          onClick={onClose}
-          disabled={uploading}
-        >
-          Cancel
-        </button>
+          {preview ? (
+            <div className="preview-container">
+              <img 
+                src={preview} 
+                alt="Preview" 
+                className="avatar-preview"
+              />
+              <button 
+                className="change-image"
+                onClick={openFileDialog}
+              >
+                Change Image
+              </button>
+            </div>
+          ) : (
+            <div className="upload-placeholder">
+              <img 
+                src={currentAvatar || '/user-avatar.svg'} 
+                alt="Current avatar" 
+                className="current-avatar"
+              />
+              <p>Drag & drop an image here or</p>
+              <button onClick={openFileDialog}>Select File</button>
+              {/Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent) && (
+                <button onClick={handleCapture}>Take Photo</button>
+              )}
+            </div>
+          )}
+        </div>
+
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileInput}
+          accept="image/*"
+          style={{ display: 'none' }}
+        />
+
+        {error && <div className="error-message">{error}</div>}
+
+        <div className="upload-actions">
+          <button
+            className="upload-button"
+            onClick={handleUpload}
+            disabled={!preview || uploading}
+          >
+            {uploading ? 'Uploading...' : 'Upload Avatar'}
+          </button>
+          <button
+            className="cancel-button"
+            onClick={() => navigate('/')}
+            disabled={uploading}
+          >
+            Cancel
+          </button>
+        </div>
       </div>
     </div>
   );

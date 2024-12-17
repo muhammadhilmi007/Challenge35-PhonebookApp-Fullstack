@@ -56,5 +56,15 @@ export const api = {
       console.error('Error updating avatar:', error);
       throw error;
     }
+  },
+
+  getContactById: async (id) => {
+    try {
+      const response = await axios.get(`${API_URL}/phonebooks/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching contact:', error);
+      throw error;
+    }
   }
 };

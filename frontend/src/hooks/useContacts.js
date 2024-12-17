@@ -9,7 +9,16 @@ export const useContacts = () => {
   const [hasMore, setHasMore] = useState(true);
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState('asc');
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(() => {
+    // Try to get the search value from sessionStorage
+    const savedSearch = sessionStorage.getItem('contactSearch');
+    return savedSearch || '';
+  });
+
+  // Save search value to sessionStorage whenever it changes
+  useEffect(() => {
+    sessionStorage.setItem('contactSearch', search);
+  }, [search]);
 
   const loadContacts = useCallback(async (loadMore = false) => {
     if (loading) return;

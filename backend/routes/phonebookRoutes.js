@@ -8,5 +8,6 @@ router.post('/phonebooks', phonebookController.addContact);
 router.put('/phonebooks/:id', phonebookController.updateContact);
 router.delete('/phonebooks/:id', phonebookController.deleteContact);
 router.put('/phonebooks/:id/avatar', upload.single('photo'), phonebookController.updateAvatar);
+router.get('/phonebooks/:id', phonebookController.getContactById);
 
 module.exports = router;

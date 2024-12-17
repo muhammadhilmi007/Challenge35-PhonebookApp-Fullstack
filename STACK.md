@@ -149,12 +149,12 @@ input search ketika diketikkan keyword, otomatis list akan langsung berubah sesu
 Sorting Mode
 -------------
 [Gambar Sorting Mode]
-Fitur Sorting dapat bekerja bersamaan dengan fitur searching. contoh pada gambar user sedang melakukan pencarian dengan keyword 'ra' disi kita melihat default soring yakni ascending berdasarkan nama. dan apabila sorting untuk descending di klik, maka list akan mengurutkan berdasarkan nama dari belakang dan ingat fitur pencarian tetap berfungsi.
+Fitur Sorting dapat bekerja bersamaan dengan fitur searching. contoh pada gambar user sedang melakukan pencarian dengan keyword 'ra' disi kita melihat default sorting yakni ascending berdasarkan nama. dan apabila sorting untuk descending di klik, maka list akan mengurutkan berdasarkan nama dari belakang dan ingat fitur pencarian tetap berfungsi.
 
 Pagination List
 -------------
 [Gambar Pagination Mode]
-untuk fitur pagination gunakan event scroll untuk melakukan load data halaman berikutnya. data halaman berikutnya langsung ditambahkan ke data sebelumnya. sehingga data akan bertambah ketika dilakukan scrolling sampai bawah.
+untuk fitur pagination gunakan addeventlistener scroll untuk melakukan load data halaman berikutnya. data halaman berikutnya langsung ditambahkan ke data sebelumnya. sehingga data akan bertambah ketika dilakukan scrolling sampai bawah.
 
 Adding View
 -------------
@@ -194,4 +194,14 @@ Keywords Tech Stack
 10. Chai
 11. Jest
 12. Database PostgreSQL
+
+
+
+## Error
+1. Button Sort nya kebalik (solved)
+2. Ketika Search data, dan terus edit data, maka data yang di edit tidak ada di list (solved)
+3. Ketika Search data, dan klik button add data, maka keyword yang di form search tidak hilang (solved)
+4. Ketika user klik update avatar, maka pindah ke halaman updateavatar
+5. Ketika Search keyword: 'bo', kenapa muncul selain bo dan harus di produce.
+6. Ketika update gambar, maka gambar yang sebelumnya terhapus juga di folder upload nya
 

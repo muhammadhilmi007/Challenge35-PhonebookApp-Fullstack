@@ -14,7 +14,7 @@ const SearchBar = ({ value, onChange, onSort, onAdd }) => {
   return (
     <div className="search-bar">
       <button onClick={handleSort} className="sort-button">
-        {sortOrder === 'asc' ? <FaSortAlphaUpAlt /> : <FaSortAlphaDownAlt />}
+        {sortOrder === 'asc' ? <FaSortAlphaDownAlt /> : <FaSortAlphaUpAlt />}
       </button>
       <div className="search-input-container">
         <BsSearch className="search-icon" />
@@ -22,7 +22,14 @@ const SearchBar = ({ value, onChange, onSort, onAdd }) => {
           type="text"
           placeholder="Search contacts..."
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => {
+            const searchValue = e.target.value;
+            onChange(searchValue);
+          }}
+          onKeyUp={(e) => {
+            const searchValue = e.target.value;
+            onChange(searchValue);
+          }}
         />
       </div>
       <button className="add-button" onClick={onAdd}><BsFillPersonPlusFill /></button>

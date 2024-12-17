@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-route
 import SearchBar from './components/SearchBar';
 import ContactList from './components/ContactList';
 import AddContact from './components/AddContact';
+import AvatarUpload from './components/AvatarUpload'; // Import AvatarUpload component
 import { useContacts } from './hooks/useContacts';
 import { api } from './services/api';
 import './styles/styles.css';
@@ -31,6 +32,7 @@ const MainPage = () => {
         contact.id === id ? { ...contact, ...updatedContact } : contact
       );
       setContacts(updatedContacts);
+      refreshContacts();
     } catch (error) {
       console.error('Error updating contact:', error);
     }
@@ -94,6 +96,7 @@ const App = () => {
       <Routes>
         <Route path="/" element={<MainPage />} />
         <Route path="/add" element={<AddContact onAdd={handleAdd} />} />
+        <Route path="/update-avatar/:id" element={<AvatarUpload />} />
       </Routes>
     </Router>
   );

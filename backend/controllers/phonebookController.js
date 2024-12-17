@@ -1,5 +1,7 @@
 const Phonebook = require('../models/phonebook');
 const { Op } = require('sequelize');
+const fs = require('fs');
+const path = require('path');
 
 const phonebookController = {
   // Get all contacts with pagination, sorting and search
@@ -80,6 +82,22 @@ const phonebookController = {
     }
   },
 
+  // Get contact by ID
+  getContactById: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const contact = await Phonebook.findByPk(id);
+      
+      if (!contact) {
+        return res.status(404).json({ error: 'Contact not found' });
+      }
+
+      res.json(contact);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  },
+
   // Update avatar
   updateAvatar: async (req, res) => {
     try {
@@ -90,7 +108,15 @@ const phonebookController = {
         return res.status(404).json({ error: 'Contact not found' });
       }
 
-      // Assuming we're using multer for file upload
+      // Delete old avatar file if it exists
+      if (contact.photo && contact.photo !== '/user-avatar.svg') {
+        const oldAvatarPath = path.join(__dirname, '..', 'uploads', path.basename(contact.photo));
+        if (fs.existsSync(oldAvatarPath)) {
+          fs.unlinkSync(oldAvatarPath);
+        }
+      }
+
+      // Update with new avatar
       const photo = req.file ? `/uploads/${req.file.filename}` : contact.photo;
       await contact.update({ photo });
       res.status(201).json(contact);

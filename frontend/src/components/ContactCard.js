@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import AvatarUpload from './AvatarUpload';
 import { BsPencilSquare, BsTrash } from 'react-icons/bs';
 
 const ContactCard = ({ contact, onEdit, onDelete, onAvatarUpdate }) => {
+  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showAvatarUpload, setShowAvatarUpload] = useState(false);
@@ -35,7 +37,7 @@ const ContactCard = ({ contact, onEdit, onDelete, onAvatarUpdate }) => {
   };
 
   const handleAvatarClick = () => {
-    setShowAvatarUpload(true);
+    navigate(`/update-avatar/${contact.id}`);
   };
 
   const handleChange = (e) => {
