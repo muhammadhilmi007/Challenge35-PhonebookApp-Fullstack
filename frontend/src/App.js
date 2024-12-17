@@ -19,13 +19,18 @@ const MainPage = () => {
     setSortBy,
     setSortOrder,
     loadMore,
-    refreshContacts
+    refreshContacts,
+    setContacts
   } = useContacts();
 
   const handleEdit = async (id, updatedContact) => {
     try {
       await api.updateContact(id, updatedContact);
-      refreshContacts();
+      // Update the contact locally instead of refreshing the entire list
+      const updatedContacts = contacts.map(contact => 
+        contact.id === id ? { ...contact, ...updatedContact } : contact
+      );
+      setContacts(updatedContacts);
     } catch (error) {
       console.error('Error updating contact:', error);
     }

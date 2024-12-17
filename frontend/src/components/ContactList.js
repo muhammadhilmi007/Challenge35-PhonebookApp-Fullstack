@@ -28,9 +28,9 @@ const ContactList = ({ contacts, onEdit, onDelete, onAvatarUpdate, onLoadMore, h
 
   return (
     <div className="contact-list">
-      {contacts.map((contact) => (
+      {contacts.map((contact, index) => (
         <ContactCard
-          key={contact.id}
+          key={contact.id || `contact-${index}`} // Gunakan index sebagai fallback
           contact={contact}
           onEdit={onEdit}
           onDelete={onDelete}

@@ -8,6 +8,7 @@ export const api = {
       const response = await axios.get(`${API_URL}/phonebooks`, {
         params: { page, limit, sortBy, sortOrder, name: search }
       });
+      console.log('API Response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error fetching contacts:', error);

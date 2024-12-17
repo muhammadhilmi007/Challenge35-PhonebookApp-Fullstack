@@ -16,14 +16,31 @@ export const useContacts = () => {
 
     setLoading(true);
     try {
-      const newPage = loadMore ? page + 1 : 1;
-      const data = await api.getContacts(newPage, 10, sortBy, sortOrder, search);
+      const currentPage = loadMore ? page + 1 : 1;
+      const { phonebooks, ...pagination } = await api.getContacts(currentPage, 10, sortBy, sortOrder, search);
       
-      setContacts(prev => loadMore ? [...prev, ...data.phonebooks] : data.phonebooks);
-      setHasMore(data.page < data.pages);
-      setPage(newPage);
+      if (Array.isArray(phonebooks)) {
+        if (loadMore) {
+          // When loading more, only append new contacts if they don't already exist
+          setContacts(prev => {
+            const existingIds = new Set(prev.map(contact => contact.id));
+            const newContacts = phonebooks.filter(contact => !existingIds.has(contact.id));
+            return [...prev, ...newContacts];
+          });
+        } else {
+          // When not loading more (initial load or filter change), replace all contacts
+          setContacts(phonebooks);
+        }
+        
+        setHasMore(currentPage < pagination.pages);
+        setPage(currentPage);
+        console.log('API Response UseContacts:', phonebooks);
+        
+      } else {
+        throw new Error('Invalid data structure received from API');
+      }
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'Error fetching contacts');
     } finally {
       setLoading(false);
     }
@@ -33,16 +50,14 @@ export const useContacts = () => {
     setContacts([]);
     setPage(1);
     setHasMore(true);
-    loadContacts();
-  }, 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  [sortBy, sortOrder, search]);
+    loadContacts(false); // Explicitly pass false for initial load
+  }, [sortBy, sortOrder, search]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const refreshContacts = useCallback(() => {
     setContacts([]);
     setPage(1);
     setHasMore(true);
-    loadContacts();
+    loadContacts(false); // Explicitly pass false for refresh
   }, [loadContacts]);
 
   return {
@@ -56,6 +71,7 @@ export const useContacts = () => {
     setSearch,
     setSortBy,
     setSortOrder,
+    setContacts,
     loadMore: () => loadContacts(true),
     refreshContacts
   };
