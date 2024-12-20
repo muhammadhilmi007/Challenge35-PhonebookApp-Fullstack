@@ -1,0 +1,26 @@
+{
+  "development": {
+    "username": "raven",
+    "password": "adzka123",
+    "database": "phonebook",
+    "host": "127.0.0.1",
+    "dialect": "postgres",
+    "logging": false
+  },
+  "test": {
+    "username": "raven",
+    "password": "adzka123",
+    "database": "phonebook",
+    "host": "127.0.0.1",
+    "dialect": "postgres",
+    "logging": true
+  },
+  "production": {
+    "username": "raven",
+    "password": "adzka123",
+    "database": "phonebook",
+    "host": "127.0.0.1",
+    "dialect": "postgres",
+    "logging": true
+  }
+}

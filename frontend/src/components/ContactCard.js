@@ -1,13 +1,9 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import AvatarUpload from './AvatarUpload';
 import { BsPencilSquare, BsTrash } from 'react-icons/bs';
 
 const ContactCard = ({ contact, onEdit, onDelete, onAvatarUpdate }) => {
-  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [showAvatarUpload, setShowAvatarUpload] = useState(false);
   const [form, setForm] = useState({
     name: contact.name,
     phone: contact.phone
@@ -37,7 +33,7 @@ const ContactCard = ({ contact, onEdit, onDelete, onAvatarUpdate }) => {
   };
 
   const handleAvatarClick = () => {
-    navigate(`/update-avatar/${contact.id}`);
+    onAvatarUpdate(contact.id);
   };
 
   const handleChange = (e) => {
@@ -50,63 +46,57 @@ const ContactCard = ({ contact, onEdit, onDelete, onAvatarUpdate }) => {
       <div className="avatar" onClick={handleAvatarClick}>
         <img src={contact.photo || '/default-avatar.png'} alt={contact.name} />
       </div>
-      
       <div className="contact-info">
         {isEditing ? (
-          <>
+          <div className="edit-form">
             <input
               type="text"
               name="name"
               value={form.name}
               onChange={handleChange}
               className="edit-input"
+              placeholder="Name"
             />
             <input
-              type="tel"
+              type="text"
               name="phone"
               value={form.phone}
               onChange={handleChange}
+              placeholder="Phone"
               className="edit-input"
             />
-          </>
+            <div className="edit-buttons">
+              <button onClick={handleSave}>Save</button>
+              <button onClick={() => setIsEditing(false)}>Cancel</button>
+            </div>
+          </div>
         ) : (
           <>
-            <h3>{contact.name}</h3>
-            <p>{contact.phone}</p>
+            <div className="contact-details">
+              <h3>{contact.name}</h3>
+              <p>{contact.phone}</p>
+            </div>
+            <div className="contact-actions">
+              <button onClick={() => setIsEditing(true)} aria-label="Edit contact">
+                <BsPencilSquare />
+              </button>
+              <button onClick={handleDelete} aria-label="Delete contact">
+                <BsTrash />
+              </button>
+            </div>
           </>
         )}
       </div>
-
-      <div className="contact-actions">
-        {isEditing ? (
-          <button onClick={handleSave} className="save-icon">✓</button>
-        ) : (
-          <button onClick={() => setIsEditing(true)} className="edit-icon">
-            <BsPencilSquare />
-          </button>
-        )}
-        <button onClick={handleDelete} className="delete-icon">
-          <BsTrash />
-        </button>
-      </div>
-
       {showConfirm && (
-        <div className="confirm-dialog">
-          <p>Are you sure you want to delete this contact?</p>
-          <div className="confirm-actions">
-            <button onClick={confirmDelete} className="confirm-yes">Yes</button>
-            <button onClick={() => setShowConfirm(false)} className="confirm-no">No</button>
+        <div className="modal-overlay">
+          <div className="confirm-dialog">
+            <p>Are you sure you want to delete this contact?</p>
+            <div className="confirm-buttons">
+              <button onClick={confirmDelete}>Yes</button>
+              <button onClick={() => setShowConfirm(false)}>No</button>
+            </div>
           </div>
         </div>
-      )}
-
-      {showAvatarUpload && (
-        <AvatarUpload
-          contactId={contact.id}
-          currentAvatar={contact.photo}
-          onUpdate={onAvatarUpdate}
-          onClose={() => setShowAvatarUpload(false)}
-        />
       )}
     </div>
   );

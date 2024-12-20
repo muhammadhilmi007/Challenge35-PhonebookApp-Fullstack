@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-route
 import SearchBar from './components/SearchBar';
 import ContactList from './components/ContactList';
 import AddContact from './components/AddContact';
-import AvatarUpload from './components/AvatarUpload'; // Import AvatarUpload component
+import AvatarUpload from './components/AvatarUpload';
 import { useContacts } from './hooks/useContacts';
 import { api } from './services/api';
 import './styles/styles.css';
@@ -27,12 +27,11 @@ const MainPage = () => {
   const handleEdit = async (id, updatedContact) => {
     try {
       await api.updateContact(id, updatedContact);
-      // Update the contact locally instead of refreshing the entire list
       const updatedContacts = contacts.map(contact => 
         contact.id === id ? { ...contact, ...updatedContact } : contact
       );
       setContacts(updatedContacts);
-      refreshContacts();
+      //refreshContacts();
     } catch (error) {
       console.error('Error updating contact:', error);
     }
@@ -52,29 +51,42 @@ const MainPage = () => {
     }
   };
 
-  const handleSort = (sortBy, sortOrder) => {
-    setSortBy(sortBy);
-    setSortOrder(sortOrder);
+  const handleAvatarUpdate = (id) => {
+    navigate(`/avatar/${id}`);
+  };
+
+  const handleSort = (field, order) => {
+    setSortBy(field);
+    setSortOrder(order);
+  };
+
+  const handleSearch = (value) => {
+    setSearch(value);
+  };
+
+  const handleAdd = () => {
+    navigate('/add');
   };
 
   if (error) return <div className="error">Error: {error}</div>;
 
   return (
     <div className="app">
-      <SearchBar
+      <SearchBar 
         value={search}
-        onChange={setSearch}
+        onChange={handleSearch}
         onSort={handleSort}
-        onAdd={() => navigate('/add')}
+        onAdd={handleAdd}
       />
-      <ContactList
+      <ContactList 
         contacts={contacts}
+        loading={loading}
+        error={error}
+        hasMore={hasMore}
+        onLoadMore={loadMore}
         onEdit={handleEdit}
         onDelete={handleDelete}
-        onAvatarUpdate={refreshContacts}
-        onLoadMore={loadMore}
-        hasMore={hasMore}
-        loading={loading}
+        onAvatarUpdate={handleAvatarUpdate}
       />
       {loading && <div className="loading">Loading...</div>}
     </div>
@@ -96,7 +108,7 @@ const App = () => {
       <Routes>
         <Route path="/" element={<MainPage />} />
         <Route path="/add" element={<AddContact onAdd={handleAdd} />} />
-        <Route path="/update-avatar/:id" element={<AvatarUpload />} />
+        <Route path="/avatar/:id" element={<AvatarUpload />} />
       </Routes>
     </Router>
   );

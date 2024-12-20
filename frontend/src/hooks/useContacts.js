@@ -18,6 +18,7 @@ export const useContacts = () => {
   // Save search value to sessionStorage whenever it changes
   useEffect(() => {
     sessionStorage.setItem('contactSearch', search);
+    console.log('Search value saved to sessionStorage:', sessionStorage.getItem('contactSearch'));
   }, [search]);
 
   const loadContacts = useCallback(async (loadMore = false) => {
@@ -28,6 +29,8 @@ export const useContacts = () => {
       const currentPage = loadMore ? page + 1 : 1;
       const { phonebooks, ...pagination } = await api.getContacts(currentPage, 10, sortBy, sortOrder, search);
       
+      console.log('API Response Search:', search);
+
       if (Array.isArray(phonebooks)) {
         if (loadMore) {
           // When loading more, only append new contacts if they don't already exist
@@ -60,6 +63,8 @@ export const useContacts = () => {
     setPage(1);
     setHasMore(true);
     loadContacts(false); // Explicitly pass false for initial load
+    console.log(search);
+    
   }, [sortBy, sortOrder, search]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const refreshContacts = useCallback(() => {

@@ -26,11 +26,19 @@ const ContactList = ({ contacts, onEdit, onDelete, onAvatarUpdate, onLoadMore, h
     };
   }, [hasMore, onLoadMore]);
 
+  if (!contacts.length) {
+    return (
+      <div className="contact-list-empty">
+        <p>No contacts available</p>
+      </div>
+    );
+  }
+
   return (
     <div className="contact-list">
       {contacts.map((contact, index) => (
         <ContactCard
-          key={contact.id || `contact-${index}`} // Gunakan index sebagai fallback
+          key={contact.id || `contact-${index}`} // Use index as fallback
           contact={contact}
           onEdit={onEdit}
           onDelete={onDelete}

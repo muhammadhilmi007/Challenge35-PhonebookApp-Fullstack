@@ -1,0 +1,180 @@
+import * as chai from "chai";
+import chaiHttp from "chai-http";
+import path from "path";
+import { fileURLToPath } from "url";
+chai.should();
+import app from "../server.js";
+import Phonebook from "../models/phonebook.js"; // Phonebook is already imported here
+const request = chai.use(chaiHttp).request;
+
+const { contact } = Phonebook;
+
+describe("Phonebook API", function () {
+  //   before(function (done) {
+  //       // Creating a test contact before running tests
+  //       Phonebook.create({
+  //           id: 1,
+  //           name: 'Test User',
+  //           phone: '08123456789'
+  //       }).then(function (contact) {
+  //           console.log(contact);
+  //           done();
+  //       }).catch(() => {
+  //           done();
+  //       });
+  //   });
+
+  //   it("seharusnya menampilkan contact denga pagination, sorting secara ascending, dan pencarian dengan GET method", function (done) {
+  //     request
+  //       .execute(app)
+  //       .get("/api/phonebooks")
+  //       .query({
+  //         name: "a",
+  //         phone: "811",
+  //         page: 1,
+  //         limit: 2,
+  //         sortBy: "name",
+  //         sortOrder: "asc",
+  //       })
+  //       .end((err, res) => {
+  //         if (err) throw err;
+  //         res.should.have.status(200);
+  //         res.body.should.be.an("object");
+  //         res.body.phonebooks.should.be.an("array");
+  //         res.body.phonebooks[0].should.be.an("object");
+  //         res.body.phonebooks[0].should.have.property("id");
+  //         res.body.phonebooks[0].should.have.property("name");
+  //         res.body.phonebooks[0].should.have.property("phone");
+  //         res.body.phonebooks[0].should.have.property("photo");
+  //         res.body.phonebooks[0].id.should.equal(157);
+  //         res.body.phonebooks[0].name.should.equal("abud");
+  //         done();
+  //       });
+  //   });
+
+  it("seharusnya menampilkan contact denga pagination, sorting secara descending, dan pencarian dengan GET method", function (done) {
+    request
+      .execute(app)
+      .get("/api/phonebooks")
+      .query({
+        name: "a",
+        phone: "811",
+        page: 1,
+        limit: 2,
+        sortBy: "name",
+        sortOrder: "desc",
+      })
+      .end((err, res) => {
+        if (err) throw err;
+        res.should.have.status(200);
+        res.body.should.be.an("object");
+        res.body.phonebooks.should.be.an("array");
+        res.body.phonebooks[0].should.be.an("object");
+        res.body.phonebooks[0].should.have.property("id");
+        res.body.phonebooks[0].should.have.property("name");
+        res.body.phonebooks[0].should.have.property("phone");
+        res.body.phonebooks[0].should.have.property("photo");
+        res.body.phonebooks[0].id.should.equal(193);
+        res.body.phonebooks[0].name.should.equal("Zeza");
+        done();
+      });
+  });
+
+//   it("seharusnya menampilkan semua kontak dengan GET method", function (done) {
+//     request
+//       .execute(app)
+//       .get("/api/phonebooks")
+//       .end((err, res) => {
+//         if (err) throw err;
+//         res.should.have.status(200);
+//         res.body.should.be.an("object");
+//         res.body.phonebooks.should.be.an("array");
+//         res.body.phonebooks[0].should.be.an("object");
+//         res.body.phonebooks[0].should.have.property("id");
+//         res.body.phonebooks[0].should.have.property("name");
+//         res.body.phonebooks[0].should.have.property("phone");
+//         res.body.phonebooks[0].should.have.property("photo");
+//         res.body.phonebooks[0].id.should.equal(209);
+//         res.body.phonebooks[0].name.should.equal("abud");
+//         done();
+//       });
+//   });
+
+//   it("seharusnya menambahkan kontak dengan POST method", function (done) {
+//     request
+//       .execute(app)
+//       .post("/api/phonebooks")
+//       .send({
+//         name: "Belajar Unit Testing Mocha",
+//         phone: "112233445566",
+//         photo: "https://example.com/phototestunit.jpg",
+//       })
+//       .end((err, res) => {
+//         if (err) throw err;
+//         res.should.have.status(201);
+//         res.should.be.an("object");
+//         res.body.should.be.an("object");
+//         res.body.should.have.property("name");
+//         res.body.should.have.property("phone");
+//         res.body.should.have.property("photo");
+//         res.body.name.should.equal("Belajar Unit Testing Mocha");
+//         done();
+//       });
+//   });
+
+//   it("seharusnya memperbarui kontak dengan PUT method", function (done) {
+//     request
+//       .execute(app)
+//       .put("/api/phonebooks/276")
+//       .send({
+//         name: "Belajar Unit Testing Jest",
+//         phone: "9988776655",
+//         photo: "https://example.com/updatedphoto.jpg",
+//       })
+//       .end((err, res) => {
+//         if (err) throw err;
+//         res.should.have.status(201);
+//         res.should.be.an("object");
+//         res.body.should.be.an("object");
+//         res.body.should.have.property("name");
+//         res.body.should.have.property("phone");
+//         res.body.should.have.property("photo");
+//         res.body.name.should.equal("Belajar Unit Testing Jest");
+//         done();
+//       });
+//   });
+
+//   it("seharusnya menghapus kontak dengan DELETE method", function (done) {
+//     request
+//       .execute(app)
+//       .delete("/api/phonebooks/276")
+//       .end((err, res) => {
+//         if (err) throw err;
+//         res.should.have.status(200);
+//         res.should.be.an("object");
+//         res.body.should.be.an("object");
+//         res.body.should.have.property("message");
+//         res.body.message.should.equal("Contact deleted successfully");
+//         done();
+//       });
+//   });
+
+//   it("seharusnya memperbarui avatar dengan PUT method", function (done) {
+//     const filePath = path.join(
+//       path.dirname(fileURLToPath(import.meta.url)),
+//       "test-avatar.jpg"
+//     );
+//     request
+//       .execute(app)
+//       .put("/api/phonebooks/279/avatar")
+//       .attach("photo", filePath)
+//       .end((err, res) => {
+//         if (err) throw err;
+//         res.should.have.status(201);
+//         res.body.should.be.an("object");
+//         res.body.should.have.property("photo");
+//         res.body.photo.should.include("/uploads/");
+//         done();
+//       });
+//   });
+});
