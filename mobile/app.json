@@ -8,9 +8,9 @@
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "permissions": ["CAMERA", "MEDIA_LIBRARY"],
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.example.mobile"
+      "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
@@ -23,12 +23,6 @@
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
-    "package": "com.example.mobile",
-    "permissions": [
-      "CAMERA",
-      "READ_EXTERNAL_STORAGE",
-      "WRITE_EXTERNAL_STORAGE"
-    ],
     "plugins": [
       "expo-router",
       [
@@ -38,11 +32,13 @@
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
-        },
+        }
+      ],
+      [
         "expo-image-picker",
         {
-          "photosPermission": "The app needs access to your photos to let you share them with your contacts.",
-          "cameraPermission": "The app needs access to your camera to let you take profile pictures."
+          "photosPermission": "The app needs access to your photos.",
+          "cameraPermission": "The app needs access to your camera."
         }
       ]
     ],
