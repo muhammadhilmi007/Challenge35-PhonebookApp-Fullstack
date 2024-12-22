@@ -3,7 +3,7 @@
     <div class="contact-info">
       <div class="avatar-container">
         <img 
-          :src="defaultAvatar"
+          :src="avatarUrl || defaultAvatar"
           :alt="contact.name"
           class="avatar"
         />
@@ -25,6 +25,8 @@
 </template>
 
 <script>
+import { config } from '../config'
+
 export default {
   name: 'ContactCard',
   
@@ -35,10 +37,30 @@ export default {
     }
   },
 
+  computed: {
+    avatarUrl() {
+      if (!this.contact.photo) {
+        return this.defaultAvatar;
+      }
+
+      // If it's the default avatar from backend
+      if (this.contact.photo === '/default-avatar.png') {
+        return `${config.backendUrl}${this.contact.photo}`;
+      }
+
+      // If it's an uploaded photo
+      if (this.contact.photo.startsWith('/uploads/')) {
+        return `${config.backendUrl}${this.contact.photo}`;
+      }
+
+      // Fallback to default avatar
+      return this.defaultAvatar;
+    }
+  },
+
   data() {
     return {
-      // Using a simple data URI for the default avatar
-      defaultAvatar: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM2NjY2NjYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMjAgMjF2LTJhNCA0IDAgMCAwLTQtNEg4YTQgNCAwIDAgMC00IDR2MiI+PC9wYXRoPjxjaXJjbGUgY3g9IjEyIiBjeT0iNyIgcj0iNCIgLz48L3N2Zz4='
+      defaultAvatar: `${config.backendUrl}/default-avatar.png`
     }
   }
 }

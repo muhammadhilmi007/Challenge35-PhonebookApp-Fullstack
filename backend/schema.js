@@ -8,13 +8,13 @@ const typeDefs = gql`
     id: ID!
     name: String!
     phone: String!
-    avatarUrl: String
+    photo: String
     createdAt: String!
     updatedAt: String!
   }
 
-  type ContactsResponse {
-    contacts: [Contact]!
+  type PaginatedContacts {
+    contacts: [Contact!]!
     total: Int!
     page: Int!
     pages: Int!
@@ -22,12 +22,12 @@ const typeDefs = gql`
 
   type Query {
     contacts(
-      page: Int = 1
-      limit: Int = 10
+      page: Int
+      limit: Int
       search: String
-      sortBy: String = "name"
-      sortOrder: String = "asc"
-    ): ContactsResponse!
+      sortBy: String
+      sortOrder: String
+    ): PaginatedContacts!
     
     contact(id: ID!): Contact
   }
@@ -42,12 +42,12 @@ const typeDefs = gql`
       id: ID!
       name: String
       phone: String
-      avatarUrl: String
+      photo: String
     ): Contact!
 
     deleteContact(id: ID!): Boolean!
 
-    uploadAvatar(id: ID!, file: Upload!): Contact!
+    uploadPhoto(id: ID!, file: Upload!): Contact!
   }
 `;
 

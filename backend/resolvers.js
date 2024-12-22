@@ -104,17 +104,23 @@ const resolvers = {
       }
     },
 
-    uploadAvatar: async (_, { id, file }) => {
+    uploadPhoto: async (_, { id, file }) => {
       try {
         const contact = await Phonebook.findByPk(id);
-        if (!contact) throw new Error('Contact not found');
+        if (!contact) {
+          throw new Error('Contact not found');
+        }
 
-        const avatarUrl = await processUpload(file);
-        await contact.update({ avatarUrl });
+        // Process file upload
+        const photoPath = await processUpload(file);
+        
+        // Update contact with new photo path
+        await contact.update({ photo: photoPath });
         
         return contact;
       } catch (error) {
-        throw new Error('Error uploading avatar: ' + error.message);
+        console.error('Error uploading photo:', error);
+        throw error;
       }
     }
   }

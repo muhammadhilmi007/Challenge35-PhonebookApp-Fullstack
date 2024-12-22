@@ -28,19 +28,16 @@ export const UPDATE_CONTACT = gql`
 
 export const DELETE_CONTACT = gql`
   mutation DeleteContact($id: ID!) {
-    deleteContact(id: $id) {
-      id
-      name
-      phone
-      photo
-    }
+    deleteContact(id: $id)
   }
 `
 
-export const UPDATE_AVATAR = gql`
-  mutation UpdateAvatar($id: ID!, $file: Upload!) {
-    updateAvatar(id: $id, file: $file) {
+export const UPLOAD_PHOTO = gql`
+  mutation UploadPhoto($id: ID!, $file: Upload!) {
+    uploadPhoto(id: $id, file: $file) {
       id
+      name
+      phone
       photo
     }
   }

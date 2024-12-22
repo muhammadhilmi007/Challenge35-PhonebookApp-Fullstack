@@ -7,6 +7,7 @@ export const GET_CONTACTS = gql`
         id
         name
         phone
+        photo
       }
       page
       pages
