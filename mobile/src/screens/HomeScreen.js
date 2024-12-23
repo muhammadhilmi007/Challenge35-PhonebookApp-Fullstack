@@ -13,7 +13,8 @@ import {
   StatusBar,
   SafeAreaView,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
+import { faSortAlphaDown, faSortAlphaUp, faUserPlus, faCirclePlus } from '@fortawesome/free-solid-svg-icons';
 import ContactCard from '@components/ContactCard';
 import SearchBar from '@components/SearchBar';
 import Loading from '@components/Loading';
@@ -21,8 +22,8 @@ import { useContacts } from '@hooks/useContacts';
 import { useFocusEffect } from '@react-navigation/native';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const HEADER_HEIGHT = Platform.OS === 'ios' ? 88 : 76; // Includes status bar
-const ICON_SIZE = Math.min(Math.max(SCREEN_WIDTH * 0.06, 24), 32); // Responsive icon size
+const HEADER_HEIGHT = Platform.OS === 'ios' ? 88 : 76;
+const ICON_SIZE = Math.min(Math.max(SCREEN_WIDTH * 0.06, 24), 32);
 const ITEMS_PER_PAGE = 10;
 
 const HomeScreen = ({ navigation }) => {
@@ -32,19 +33,25 @@ const HomeScreen = ({ navigation }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
   const [sortOrder, setSortOrder] = useState('asc');
+  const [filteredContacts, setFilteredContacts] = useState([]);
 
-  // Fetch contacts when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      fetchContacts(1, ITEMS_PER_PAGE, 'name', sortOrder);
+      fetchContacts(1, ITEMS_PER_PAGE, 'name', sortOrder, search);
       setCurrentPage(1);
-    }, [fetchContacts, sortOrder])
+    }, [fetchContacts, sortOrder, search])
   );
 
-  // Initial fetch
   useEffect(() => {
-    fetchContacts(1, ITEMS_PER_PAGE, 'name', sortOrder);
-  }, [fetchContacts, sortOrder]);
+    if (contacts?.phonebooks) {
+      const filtered = contacts.phonebooks.filter(contact =>
+        contact.name.toLowerCase().includes(search.toLowerCase())
+      );
+      setFilteredContacts(filtered.sort((a, b) => 
+        sortOrder === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)
+      ));
+    }
+  }, [contacts, search, sortOrder]);
 
   const handleSort = () => {
     const newSortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
@@ -62,10 +69,7 @@ const HomeScreen = ({ navigation }) => {
       'Delete Contact',
       'Are you sure you want to delete this contact?',
       [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
           style: 'destructive',
@@ -166,7 +170,7 @@ const HomeScreen = ({ navigation }) => {
         {search ? 'No contacts found matching your search' : 'No contacts yet'}
       </Text>
       <TouchableOpacity style={styles.addButton} onPress={handleAddContact}>
-        <Ionicons name="add-circle-outline" size={24} color="#007AFF" />
+        <FontAwesomeIcon icon={faCirclePlus} size={24} color="#007AFF" />
         <Text style={styles.addButtonText}>Add New Contact</Text>
       </TouchableOpacity>
     </View>
@@ -178,8 +182,8 @@ const HomeScreen = ({ navigation }) => {
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity style={styles.headerButton} onPress={handleSort}>
-            <Ionicons 
-              name={sortOrder === 'asc' ? 'arrow-down' : 'arrow-up'} 
+            <FontAwesomeIcon 
+              icon={sortOrder === 'asc' ? faSortAlphaDown : faSortAlphaUp} 
               size={ICON_SIZE} 
               color="#fff" 
             />
@@ -192,7 +196,7 @@ const HomeScreen = ({ navigation }) => {
             />
           </View>
           <TouchableOpacity style={styles.headerButton} onPress={handleAddContact}>
-            <Ionicons name="person-add" size={ICON_SIZE} color="#fff" />
+            <FontAwesomeIcon icon={faUserPlus} size={ICON_SIZE} color="#fff" />
           </TouchableOpacity>
         </View>
 
@@ -200,7 +204,7 @@ const HomeScreen = ({ navigation }) => {
           style={styles.scrollView}
           contentContainerStyle={[
             styles.scrollContent,
-            !contacts?.phonebooks?.length && styles.emptyScrollContent
+            !filteredContacts.length && styles.emptyScrollContent
           ]}
           refreshControl={
             <RefreshControl
@@ -216,9 +220,9 @@ const HomeScreen = ({ navigation }) => {
           onScroll={handleScroll}
           scrollEventThrottle={16}
         >
-          {contacts?.phonebooks?.length > 0 ? (
+          {filteredContacts.length > 0 ? (
             <>
-              {contacts.phonebooks.map((contact, index) => (
+              {filteredContacts.map((contact, index) => (
                 <ContactCard
                   key={`${contact.id}-${index}`}
                   contact={contact}
@@ -258,7 +262,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     backgroundColor: '#b08968',
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
-    paddingHorizontal: Math.max(16, SCREEN_WIDTH * 0.04), // Responsive padding
+    paddingHorizontal: Math.max(16, SCREEN_WIDTH * 0.04),
   },
   headerButton: {
     width: ICON_SIZE * 2,
@@ -269,20 +273,20 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     flex: 1,
-    marginHorizontal: Math.max(8, SCREEN_WIDTH * 0.02), // Responsive margin
+    marginHorizontal: Math.max(8, SCREEN_WIDTH * 0.02),
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingVertical: Math.max(10, SCREEN_HEIGHT * 0.01), // Responsive padding
+    paddingVertical: Math.max(10, SCREEN_HEIGHT * 0.01),
   },
   emptyScrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
   },
   loadingMore: {
-    padding: Math.max(16, SCREEN_HEIGHT * 0.02), // Responsive padding
+    padding: Math.max(16, SCREEN_HEIGHT * 0.02),
     alignItems: 'center',
   },
   centerContainer: {
