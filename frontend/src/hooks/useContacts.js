@@ -50,7 +50,7 @@ export const useContacts = () => {
       const currentPage = loadMore ? page + 1 : 1;
       // Panggil API untuk mendapatkan kontak
       const { phonebooks, ...pagination } = await api.getContacts(currentPage, 10, sortBy, sortOrder, search);
-      
+
       //console.log('API Response Search:', search);
 
       if (Array.isArray(phonebooks)) {
@@ -115,3 +115,35 @@ export const useContacts = () => {
     refreshContacts
   };
 };
+
+// Penjelasan, Alur, dan Logika:
+
+// 1. Penjelasan:
+//    - Hook useContacts adalah custom hook untuk mengelola data kontak.
+//    - Hook ini menangani state untuk daftar kontak, loading, error, paginasi, pengurutan, dan pencarian.
+//    - Menyediakan fungsi-fungsi untuk memuat, memperbarui, dan me-refresh data kontak.
+
+// 2. Alur:
+//    a. Inisialisasi state dan fungsi-fungsi terkait.
+//    b. Saat komponen yang menggunakan hook ini di-mount, kontak dimuat dari API.
+//    c. Pengguna dapat melakukan pencarian, mengubah pengurutan, atau memuat lebih banyak kontak.
+//    d. Setiap perubahan pada kriteria pencarian atau pengurutan memicu pemuatan ulang kontak.
+//    e. Kontak dapat di-refresh kapan saja menggunakan fungsi refreshContacts.
+
+// 3. Logika:
+//    - Menggunakan callbacks untuk optimasi performa dan menghindari re-render yang tidak perlu.
+//    - Mengelola state loading untuk mencegah multiple API calls bersamaan.
+//    - Menggunakan sessionStorage untuk menyimpan state pencarian, memungkinkan persistensi setelah refresh halaman.
+//    - Menerapkan paginasi dengan infinite scrolling menggunakan state hasMore.
+//    - Menggabungkan kontak baru dengan yang sudah ada saat memuat lebih banyak data, menghindari duplikasi.
+
+// 4. Keterhubungan dengan Backend:
+//    - Menggunakan modul api untuk berkomunikasi dengan backend.
+//    - Fungsi loadContacts memanggil api.getContacts untuk mengambil data kontak dari server.
+//    - Parameter seperti halaman, jumlah item per halaman, pengurutan, dan kata kunci pencarian dikirim ke backend.
+//    - Backend mengembalikan data kontak beserta informasi paginasi yang digunakan untuk mengatur state di frontend.
+//    - Error dari backend ditangkap dan disimpan dalam state error untuk ditampilkan ke pengguna jika diperlukan.
+
+// Hook ini menyediakan abstraksi yang kuat untuk manajemen data kontak, memungkinkan komponen-komponen React 
+// untuk dengan mudah mengakses dan memanipulasi data kontak tanpa perlu mengetahui detail implementasi 
+// atau interaksi dengan backend.

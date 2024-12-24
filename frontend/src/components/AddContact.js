@@ -100,3 +100,55 @@ const AddContact = ({ onAdd }) => {
 
 // Mengekspor komponen AddContact
 export default AddContact;
+
+/*
+Penjelasan, Alur, dan Logika:
+
+1. Impor Modul:
+   - Kode dimulai dengan mengimpor useState dari React dan useNavigate dari react-router-dom.
+
+2. Definisi Komponen:
+   - Komponen AddContact didefinisikan sebagai fungsi yang menerima prop onAdd.
+
+3. State Management:
+   - Menggunakan useState untuk mengelola state form, error, dan isSubmitting.
+   - form menyimpan data input (nama dan nomor telepon).
+   - error menyimpan pesan kesalahan jika ada.
+   - isSubmitting menandai apakah form sedang dalam proses pengiriman.
+
+4. Navigasi:
+   - useNavigate digunakan untuk navigasi antar halaman.
+
+5. Fungsi handleCancel:
+   - Menangani pembatalan dan kembali ke halaman utama.
+
+6. Fungsi handleSubmit:
+   - Dipanggil saat form disubmit.
+   - Mencegah perilaku default form.
+   - Melakukan validasi input.
+   - Jika valid, memanggil onAdd dengan data form.
+   - Menangani error jika gagal menambahkan kontak.
+   - Mengatur isSubmitting sesuai dengan status proses.
+
+7. Fungsi handleChange:
+   - Memperbarui state form saat input berubah.
+
+8. Render Komponen:
+   - Menampilkan form dengan input untuk nama dan nomor telepon.
+   - Menampilkan pesan error jika ada.
+   - Menyertakan tombol submit dan cancel.
+
+9. Ekspor Komponen:
+   - Mengekspor AddContact agar dapat digunakan di komponen lain.
+
+Alur logika komponen ini adalah:
+1. User mengisi form.
+2. Saat input berubah, state form diperbarui.
+3. Saat form disubmit, data divalidasi.
+4. Jika valid, kontak baru ditambahkan.
+5. Jika berhasil, user diarahkan ke halaman utama.
+6. Jika gagal, pesan error ditampilkan.
+7. User dapat membatalkan proses kapan saja.
+
+Komponen ini menerapkan prinsip-prinsip React seperti penggunaan hooks (useState, useNavigate) dan pengelolaan state untuk membuat form yang interaktif dan responsif.
+*/

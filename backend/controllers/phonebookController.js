@@ -163,3 +163,52 @@ const phonebookController = {
 
 // Ekspor objek controller agar dapat digunakan di file lain
 module.exports = phonebookController;
+
+/*
+Penjelasan, Alur, dan Logika:
+
+1. Struktur Controller:
+   Controller ini mengatur operasi CRUD (Create, Read, Update, Delete) untuk entitas kontak dalam buku telepon.
+   Setiap metode dalam controller menangani satu jenis operasi spesifik.
+
+2. Alur Umum:
+   a. Menerima permintaan dari klien (frontend)
+   b. Memproses data sesuai dengan operasi yang diminta
+   c. Berinteraksi dengan model Phonebook untuk operasi database
+   d. Mengirim respons kembali ke klien
+
+3. Logika per Metode:
+   - getContacts: Mengambil daftar kontak dengan paginasi, pengurutan, dan pencarian.
+   - addContact: Menambahkan kontak baru ke database.
+   - updateContact: Memperbarui data kontak yang sudah ada.
+   - deleteContact: Menghapus kontak dari database.
+   - getContactById: Mengambil detail kontak berdasarkan ID.
+   - updateAvatar: Memperbarui foto profil kontak.
+
+4. Penanganan Error:
+   Setiap metode dilengkapi dengan blok try-catch untuk menangani kesalahan.
+   Jika terjadi error, respons dengan status code yang sesuai dikirimkan ke klien.
+
+5. Keterhubungan dengan Frontend:
+   a. Frontend mengirim permintaan HTTP ke endpoint yang sesuai.
+   b. Controller memproses permintaan dan mengirim respons.
+   c. Frontend menerima respons dan memperbarui tampilan sesuai data yang diterima.
+
+   Contoh:
+   - Saat pengguna membuka aplikasi, frontend memanggil getContacts untuk menampilkan daftar kontak.
+   - Ketika pengguna menambah kontak baru, frontend memanggil addContact.
+   - Saat pengguna mengubah data kontak, updateContact dipanggil.
+   - Untuk menghapus kontak, frontend memanggil deleteContact.
+   - Ketika pengguna memilih kontak tertentu, getContactById digunakan untuk mendapatkan detail.
+   - Saat pengguna mengganti foto profil kontak, updateAvatar dipanggil.
+
+6. Keamanan dan Validasi:
+   - Validasi data input dilakukan di sisi frontend sebelum mengirim ke backend.
+   - Controller melakukan validasi tambahan dan penanganan kesalahan untuk memastikan integritas data.
+
+7. Optimisasi:
+   - Paginasi digunakan untuk mengoptimalkan kinerja saat mengambil daftar kontak yang besar.
+   - Pencarian dan pengurutan dilakukan di sisi server untuk mengurangi beban di sisi klien.
+
+Controller ini menjadi jembatan antara frontend dan database, memastikan bahwa semua operasi data dilakukan dengan aman dan efisien.
+*/
