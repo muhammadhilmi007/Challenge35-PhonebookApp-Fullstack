@@ -1,17 +1,29 @@
+// Import library dan komponen yang diperlukan
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 
+// Komponen utama AvatarUpload
 const AvatarUpload = () => {
+  // Mengambil parameter id dari URL
   const { id } = useParams();
+  // Hook untuk navigasi
   const navigate = useNavigate();
+  
+  // State untuk menyimpan preview gambar
   const [preview, setPreview] = useState(null);
+  // State untuk menyimpan avatar saat ini
   const [currentAvatar, setCurrentAvatar] = useState(null);
+  // State untuk menandai proses upload
   const [uploading, setUploading] = useState(false);
+  // State untuk menyimpan pesan error
   const [error, setError] = useState('');
+  // Referensi untuk input file
   const fileInputRef = useRef(null);
+  // State untuk menandai drag over
   const [dragOver, setDragOver] = useState(false);
 
+  // Effect untuk mengambil data kontak saat komponen dimount
   useEffect(() => {
     const fetchContact = async () => {
       try {
@@ -20,22 +32,23 @@ const AvatarUpload = () => {
           setCurrentAvatar(contact.photo);
         }
       } catch (err) {
-        setError('Failed to fetch contact information');
-        console.error('Error fetching contact:', err);
+        setError('Gagal mengambil informasi kontak');
+        console.error('Error mengambil kontak:', err);
       }
     };
     fetchContact();
   }, [id]);
 
+  // Fungsi untuk memilih file
   const handleFileSelect = useCallback((file) => {
     const validTypes = ['image/jpeg', 'image/png', 'image/jpg'];
     if (!validTypes.includes(file.type)) {
-      setError('Please select a valid image file (JPG, PNG)');
+      setError('Pilih file gambar yang valid (JPG, PNG)');
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      setError('File size should be less than 5MB');
+      setError('Ukuran file harus kurang dari 5MB');
       return;
     }
 
@@ -47,16 +60,19 @@ const AvatarUpload = () => {
     reader.readAsDataURL(file);
   }, []);
 
+  // Fungsi untuk menangani drag over
   const handleDragOver = useCallback((e) => {
     e.preventDefault();
     setDragOver(true);
   }, []);
 
+  // Fungsi untuk menangani drag leave
   const handleDragLeave = useCallback((e) => {
     e.preventDefault();
     setDragOver(false);
   }, []);
 
+  // Fungsi untuk menangani drop file
   const handleDrop = useCallback((e) => {
     e.preventDefault();
     setDragOver(false);
@@ -66,6 +82,7 @@ const AvatarUpload = () => {
     }
   }, [handleFileSelect]);
 
+  // Fungsi untuk menangani input file
   const handleFileInput = useCallback((e) => {
     const file = e.target.files[0];
     if (file) {
@@ -73,6 +90,7 @@ const AvatarUpload = () => {
     }
   }, [handleFileSelect]);
 
+  // Fungsi untuk mengunggah avatar
   const handleUpload = useCallback(async () => {
     if (!preview) return;
 
@@ -90,30 +108,33 @@ const AvatarUpload = () => {
       await api.updateAvatar(id, formData);
       navigate('/');
     } catch (err) {
-      setError('Failed to upload avatar. Please try again.');
+      setError('Gagal mengunggah avatar. Silakan coba lagi.');
     } finally {
       setUploading(false);
     }
   }, [preview, id, navigate]);
 
+  // Fungsi untuk membuka dialog pemilihan file
   const openFileDialog = useCallback(() => {
     fileInputRef.current?.click();
   }, []);
 
+  // Fungsi untuk menangani pengambilan foto (khusus perangkat mobile)
   const handleCapture = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       stream.getTracks().forEach(track => track.stop());
     } catch (err) {
-      setError('Unable to access camera. Please check permissions.');
+      setError('Tidak dapat mengakses kamera. Periksa izin.');
     }
   }, []);
 
+  // Render komponen
   return (
     <div className="avatar-upload-page">
       <div className="avatar-upload-container">
         <div className="avatar-upload-header">
-          <h3>Update Profile Picture</h3>
+          <h3>Perbarui Foto Profil</h3>
           <button className="close-button" onClick={() => navigate('/')}>&times;</button>
         </div>
 
@@ -134,20 +155,20 @@ const AvatarUpload = () => {
                 className="change-image"
                 onClick={openFileDialog}
               >
-                Change Image
+                Ganti Gambar
               </button>
             </div>
           ) : (
             <div className="upload-placeholder">
               <img 
                 src={currentAvatar || '/user-avatar.svg'} 
-                alt="Current avatar" 
+                alt="Avatar saat ini" 
                 className="current-avatar"
               />
-              <p>Drag & drop an image here or</p>
-              <button onClick={openFileDialog}>Select File</button>
+              <p>Seret & lepas gambar di sini atau</p>
+              <button onClick={openFileDialog}>Pilih File</button>
               {/Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent) && (
-                <button onClick={handleCapture}>Take Photo</button>
+                <button onClick={handleCapture}>Ambil Foto</button>
               )}
             </div>
           )}
@@ -169,14 +190,14 @@ const AvatarUpload = () => {
             onClick={handleUpload}
             disabled={!preview || uploading}
           >
-            {uploading ? 'Uploading...' : 'Upload Avatar'}
+            {uploading ? 'Mengunggah...' : 'Unggah Avatar'}
           </button>
           <button
             className="cancel-button"
             onClick={() => navigate('/')}
             disabled={uploading}
           >
-            Cancel
+            Batal
           </button>
         </div>
       </div>
@@ -184,4 +205,5 @@ const AvatarUpload = () => {
   );
 };
 
+// Ekspor komponen
 export default AvatarUpload;

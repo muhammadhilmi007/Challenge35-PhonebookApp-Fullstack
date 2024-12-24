@@ -90,7 +90,7 @@ describe("Contacts API", function () {
         res.body.contacts[0].should.have.property("name");
         res.body.contacts[0].should.have.property("phone");
         res.body.contacts[0].should.have.property("photo");
-        res.body.contacts[0].name.should.equal("Abdul");
+        res.body.contacts[0].name.should.equal("Aditya");
         done();
       });
   });
@@ -107,7 +107,7 @@ describe("Contacts API", function () {
         res.body.should.have.property("name");
         res.body.should.have.property("phone");
         res.body.should.have.property("photo");
-        res.body.name.should.equal("Felix");
+        res.body.name.should.equal("Aditya");
         done();
       });
   });
@@ -194,12 +194,12 @@ describe("Contacts API", function () {
       });
   });
 
-  // after(async () => {
-  //   await Contacts.destroy({
-  //     truncate: true,
-  //     cascade: false,
-  //     restartIdentity: true,
-  //   });
-  // });
+  after(async () => {
+    await Contacts.destroy({
+      truncate: true,
+      cascade: false,
+      restartIdentity: true,
+    });
+  });
   
 });
