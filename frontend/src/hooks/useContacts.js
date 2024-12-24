@@ -18,18 +18,18 @@ export const useContacts = () => {
   const [sortOrder, setSortOrder] = useState('asc');
   // State untuk menyimpan kata kunci pencarian, diinisialisasi dari sessionStorage
   const [search, setSearch] = useState(() => {
-    // Only restore search if it wasn't from a browser refresh
-    return sessionStorage.getItem('searchActive') ? (sessionStorage.getItem('contactSearch') || '') : '';
+    const savedSearch = sessionStorage.getItem('contactSearch');
+    const isActive = sessionStorage.getItem('searchActive');
+    return isActive ? (savedSearch || '') : '';
   });
 
   // Fungsi untuk mengatur pencarian
   const handleSearch = useCallback((value) => {
     setSearch(value);
+    sessionStorage.setItem('contactSearch', value || '');
     if (value) {
-      sessionStorage.setItem('contactSearch', value);
       sessionStorage.setItem('searchActive', 'true');
     } else {
-      sessionStorage.removeItem('contactSearch');
       sessionStorage.removeItem('searchActive');
     }
   }, []);
