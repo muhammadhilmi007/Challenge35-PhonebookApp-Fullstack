@@ -50,9 +50,9 @@ const ContactList = ({ contacts, onEdit, onDelete, onAvatarUpdate, onLoadMore, h
   return (
     <div className="contact-list">
       {/* Memetakan setiap kontak ke komponen ContactCard */}
-      {contacts.map((contact, index) => (
+      {contacts.map((contact) => (
         <ContactCard
-          key={contact.id || `contact-${index}`} // Menggunakan ID kontak atau indeks sebagai key
+          key={contact.id} // Menggunakan ID kontak atau indeks sebagai key
           contact={contact}
           onEdit={onEdit}
           onDelete={onDelete}

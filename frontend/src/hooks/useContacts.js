@@ -12,10 +12,14 @@ export const useContacts = () => {
   const [page, setPage] = useState(1);
   // State untuk menandai apakah masih ada data kontak yang bisa dimuat
   const [hasMore, setHasMore] = useState(true);
-  // State untuk menyimpan kriteria pengurutan (defaultnya berdasarkan nama)
-  const [sortBy, setSortBy] = useState('name');
-  // State untuk menyimpan urutan pengurutan (defaultnya ascending)
-  const [sortOrder, setSortOrder] = useState('asc');
+  // State untuk menyimpan kriteria pengurutan, diinisialisasi dari sessionStorage
+  const [sortBy, setSortBy] = useState(() => {
+    return sessionStorage.getItem('contactSortBy') || 'name';
+  });
+  // State untuk menyimpan urutan pengurutan, diinisialisasi dari sessionStorage
+  const [sortOrder, setSortOrder] = useState(() => {
+    return sessionStorage.getItem('contactSortOrder') || 'asc';
+  });
   // State untuk menyimpan kata kunci pencarian, diinisialisasi dari sessionStorage
   const [search, setSearch] = useState(() => {
     const savedSearch = sessionStorage.getItem('contactSearch');
@@ -32,6 +36,14 @@ export const useContacts = () => {
     } else {
       sessionStorage.removeItem('searchActive');
     }
+  }, []);
+
+  // Fungsi untuk mengatur pengurutan
+  const handleSort = useCallback((field, order) => {
+    setSortBy(field);
+    setSortOrder(order);
+    sessionStorage.setItem('contactSortBy', field);
+    sessionStorage.setItem('contactSortOrder', order);
   }, []);
 
   // Effect untuk menyimpan kata kunci pencarian ke sessionStorage setiap kali berubah
@@ -108,8 +120,11 @@ export const useContacts = () => {
     sortOrder,
     search,
     setSearch: handleSearch,
-    setSortBy,
-    setSortOrder,
+    setSortBy: handleSort,
+    setSortOrder: (order) => {
+      setSortOrder(order);
+      sessionStorage.setItem('contactSortOrder', order);
+    },
     setContacts,
     loadMore: () => loadContacts(true),
     refreshContacts

@@ -15,7 +15,25 @@ const AddContact = ({ onAdd }) => {
 
   // Fungsi untuk menangani kembali ke halaman utama
   const handleCancel = () => {
-    navigate('/', { replace: true });
+    // Preserve the existing search and sort state when navigating back
+    const searchParams = new URLSearchParams();
+    const search = sessionStorage.getItem('contactSearch');
+    const sortBy = sessionStorage.getItem('contactSortBy');
+    const sortOrder = sessionStorage.getItem('contactSortOrder');
+    const isSearchActive = sessionStorage.getItem('searchActive');
+
+    if (isSearchActive && search) {
+      searchParams.append('search', search);
+    }
+    if (sortBy) {
+      searchParams.append('sortBy', sortBy);
+    }
+    if (sortOrder) {
+      searchParams.append('sortOrder', sortOrder);
+    }
+
+    const queryString = searchParams.toString();
+    navigate(`/${queryString ? `?${queryString}` : ''}`, { replace: true });
   };
 
   // Fungsi untuk menangani submit formulir
@@ -121,6 +139,7 @@ Penjelasan, Alur, dan Logika:
 
 5. Fungsi handleCancel:
    - Menangani pembatalan dan kembali ke halaman utama.
+   - Mempertahankan state pencarian dan pengurutan saat pembatalan.
 
 6. Fungsi handleSubmit:
    - Dipanggil saat form disubmit.

@@ -1,10 +1,11 @@
 // Mengimpor modul dan komponen yang diperlukan
-import React from "react";
+import React, { useEffect } from "react";
 import {
   BrowserRouter as Router,
   Routes,
   Route,
   useNavigate,
+  useLocation,
 } from "react-router-dom";
 import SearchBar from "./components/SearchBar";
 import ContactList from "./components/ContactList";
@@ -18,6 +19,26 @@ import "./styles/styles.css";
 const MainPage = () => {
   // Menggunakan hook useNavigate untuk navigasi
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Parse URL parameters on component mount
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const searchQuery = params.get('search');
+    const sortBy = params.get('sortBy');
+    const sortOrder = params.get('sortOrder');
+
+    if (searchQuery) {
+      sessionStorage.setItem('contactSearch', searchQuery);
+      sessionStorage.setItem('searchActive', 'true');
+    }
+    if (sortBy) {
+      sessionStorage.setItem('contactSortBy', sortBy);
+    }
+    if (sortOrder) {
+      sessionStorage.setItem('contactSortOrder', sortOrder);
+    }
+  }, [location.search]);
 
   // Menggunakan custom hook useContacts untuk mengelola state kontak
   const {
