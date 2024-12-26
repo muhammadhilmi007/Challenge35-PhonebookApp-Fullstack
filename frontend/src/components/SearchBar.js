@@ -5,8 +5,10 @@ import { FaSortAlphaUpAlt, FaSortAlphaDownAlt } from "react-icons/fa";
 
 // Komponen SearchBar dengan props yang diterima
 const SearchBar = ({ value = '', onChange, onSort, onAdd }) => {
-  // State untuk menyimpan urutan pengurutan (asc/desc)
-  const [sortOrder, setSortOrder] = useState('asc');
+  // State untuk menyimpan urutan pengurutan (asc/desc), diinisialisasi dari sessionStorage
+  const [sortOrder, setSortOrder] = useState(() => {
+    return sessionStorage.getItem('contactSortOrder') || 'asc';
+  });
 
   // Fungsi untuk menangani perubahan urutan pengurutan
   const handleSort = () => {

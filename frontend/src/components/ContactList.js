@@ -52,7 +52,7 @@ const ContactList = ({ contacts, onEdit, onDelete, onAvatarUpdate, onLoadMore, h
       {/* Memetakan setiap kontak ke komponen ContactCard */}
       {contacts.map((contact) => (
         <ContactCard
-          key={contact.id} // Menggunakan ID kontak atau indeks sebagai key
+          key={contact.id} // Menggunakan ID kontak
           contact={contact}
           onEdit={onEdit}
           onDelete={onDelete}

@@ -40,10 +40,17 @@ export const useContacts = () => {
 
   // Fungsi untuk mengatur pengurutan
   const handleSort = useCallback((field, order) => {
-    setSortBy(field);
-    setSortOrder(order);
+    // Update session storage
     sessionStorage.setItem('contactSortBy', field);
     sessionStorage.setItem('contactSortOrder', order);
+    
+    // Reset pagination
+    setPage(1);
+    setContacts([]);
+    
+    // Update state (this will trigger loadContacts via useEffect)
+    setSortBy(field);
+    setSortOrder(order);
   }, []);
 
   // Effect untuk menyimpan kata kunci pencarian ke sessionStorage setiap kali berubah
@@ -52,18 +59,37 @@ export const useContacts = () => {
     //console.log('Search value saved to sessionStorage:', sessionStorage.getItem('contactSearch'));
   }, [search]);
 
+  // Effect untuk memuat ulang kontak ketika kriteria pencarian atau pengurutan berubah
+  useEffect(() => {
+    const fetchData = async () => {
+      setContacts([]);
+      setPage(1);
+      setHasMore(true);
+      await loadContacts(false); // Muat ulang kontak dari awal
+    };
+    
+    fetchData();
+  }, [sortBy, sortOrder, search]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Fungsi untuk memuat kontak dari API
   const loadContacts = useCallback(async (loadMore = false) => {
     if (loading) return; // Jika sedang loading, hentikan eksekusi
 
     setLoading(true);
+    setError(null); // Reset error state
+    
     try {
       // Tentukan halaman yang akan dimuat
       const currentPage = loadMore ? page + 1 : 1;
+      
       // Panggil API untuk mendapatkan kontak
-      const { phonebooks, ...pagination } = await api.getContacts(currentPage, 10, sortBy, sortOrder, search);
-
-      //console.log('API Response Search:', search);
+      const { phonebooks, ...pagination } = await api.getContacts(
+        currentPage, 
+        10, 
+        sortBy, 
+        sortOrder, 
+        search
+      );
 
       if (Array.isArray(phonebooks)) {
         if (loadMore) {
@@ -81,26 +107,16 @@ export const useContacts = () => {
         // Update state terkait paginasi
         setHasMore(currentPage < pagination.pages);
         setPage(currentPage);
-        console.log('API Response UseContacts:', phonebooks);
-        
       } else {
         throw new Error('Invalid data structure received from API');
       }
     } catch (err) {
       setError(err.message || 'Error fetching contacts');
+      console.error('Error loading contacts:', err);
     } finally {
       setLoading(false);
     }
   }, [loading, page, sortBy, sortOrder, search]);
-
-  // Effect untuk memuat ulang kontak ketika kriteria pencarian berubah
-  useEffect(() => {
-    setContacts([]);
-    setPage(1);
-    setHasMore(true);
-    loadContacts(false); // Muat ulang kontak dari awal
-    console.log(search);
-  }, [sortBy, sortOrder, search]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fungsi untuk me-refresh daftar kontak
   const refreshContacts = useCallback(() => {
