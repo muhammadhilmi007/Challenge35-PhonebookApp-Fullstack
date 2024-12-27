@@ -1,5 +1,5 @@
 // Mengimpor modul dan komponen yang diperlukan
-import React, { useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -11,9 +11,129 @@ import SearchBar from "./components/SearchBar";
 import ContactList from "./components/ContactList";
 import AddContact from "./components/AddContact";
 import AvatarUpload from "./components/AvatarUpload";
-import { useContacts } from "./hooks/useContacts";
 import { api } from "./services/api";
 import "./styles/styles.css";
+
+// Custom hook untuk mengelola state kontak
+const useContacts = () => {
+  const [contacts, setContacts] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [sortBy, setSortBy] = useState(() => {
+    return sessionStorage.getItem('contactSortBy') || 'name';
+  });
+  const [sortOrder, setSortOrder] = useState(() => {
+    return sessionStorage.getItem('contactSortOrder') || 'asc';
+  });
+  const [search, setSearch] = useState(() => {
+    const savedSearch = sessionStorage.getItem('contactSearch');
+    const isActive = sessionStorage.getItem('searchActive');
+    return isActive ? (savedSearch || '') : '';
+  });
+
+  const handleSearch = useCallback((value) => {
+    setSearch(value);
+    sessionStorage.setItem('contactSearch', value || '');
+    if (value) {
+      sessionStorage.setItem('searchActive', 'true');
+    } else {
+      sessionStorage.removeItem('searchActive');
+    }
+  }, []);
+
+  const handleSort = useCallback((field, order) => {
+    sessionStorage.setItem('contactSortBy', field);
+    sessionStorage.setItem('contactSortOrder', order);
+    setPage(1);
+    setContacts([]);
+    setSortBy(field);
+    setSortOrder(order);
+  }, []);
+
+  useEffect(() => {
+    sessionStorage.setItem('contactSearch', search);
+  }, [search]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setContacts([]);
+      setPage(1);
+      setHasMore(true);
+      await loadContacts(false);
+    };
+    
+    fetchData();
+  }, [sortBy, sortOrder, search]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadContacts = useCallback(async (loadMore = false) => {
+    if (loading) return;
+
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const currentPage = loadMore ? page + 1 : 1;
+      
+      const { phonebooks, ...pagination } = await api.getContacts(
+        currentPage, 
+        10, 
+        sortBy, 
+        sortOrder, 
+        search
+      );
+
+      if (Array.isArray(phonebooks)) {
+        if (loadMore) {
+          setContacts(prev => {
+            const existingIds = new Set(prev.map(contact => contact.id));
+            const newContacts = phonebooks.filter(contact => !existingIds.has(contact.id));
+            return [...prev, ...newContacts];
+          });
+        } else {
+          setContacts(phonebooks);
+        }
+        
+        setHasMore(currentPage < pagination.pages);
+        setPage(currentPage);
+      } else {
+        throw new Error('Invalid data structure received from API');
+      }
+    } catch (err) {
+      setError(err.message || 'Error fetching contacts');
+      console.error('Error loading contacts:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [loading, page, sortBy, sortOrder, search]);
+
+  const refreshContacts = useCallback(() => {
+    setContacts([]);
+    setPage(1);
+    setHasMore(true);
+    loadContacts(false);
+  }, [loadContacts]);
+
+  return {
+    contacts,
+    loading,
+    error,
+    hasMore,
+    sortBy,
+    sortOrder,
+    search,
+    setSearch: handleSearch,
+    setSortBy: handleSort,
+    setSortOrder: (order) => {
+      setSortOrder(order);
+      sessionStorage.setItem('contactSortOrder', order);
+    },
+    setContacts,
+    loadMore: () => loadContacts(true),
+    refreshContacts
+  };
+};
 
 // Komponen utama untuk halaman utama
 const MainPage = () => {
