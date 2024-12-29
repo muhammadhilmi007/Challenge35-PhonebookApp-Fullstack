@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 
 // Komponen utama AvatarUpload
-const AvatarUpload = () => {
+const AvatarUpload = ({ onAvatarUpdate }) => {
   // Mengambil parameter id dari URL
   const { id } = useParams();
   // Hook untuk navigasi
@@ -106,13 +106,16 @@ const AvatarUpload = () => {
       formData.append('photo', file);
 
       await api.updateAvatar(id, formData);
+      if (onAvatarUpdate) {
+        await onAvatarUpdate();
+      }
       navigate('/');
     } catch (err) {
       setError('Gagal mengunggah avatar. Silakan coba lagi.');
     } finally {
       setUploading(false);
     }
-  }, [preview, id, navigate]);
+  }, [preview, id, navigate, onAvatarUpdate]);
 
   // Fungsi untuk membuka dialog pemilihan file
   const openFileDialog = useCallback(() => {
