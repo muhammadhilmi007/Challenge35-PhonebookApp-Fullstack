@@ -9,20 +9,39 @@ import {
   SafeAreaView,
   ActivityIndicator,
   Platform,
+  ImageSourcePropType,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RouteProp } from '@react-navigation/native';
+import { RootStackParamList } from '@types';
 
-const API_URL = 'http://192.168.1.9:3001';
+const API_URL = 'http://192.168.1.11:3001';
 const DEFAULT_AVATAR = require('../../assets/default-avatar.png');
 
-const AvatarScreen = ({ route, navigation }) => {
-  const { contact, onAvatarSelect } = route.params;
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [loading, setLoading] = useState(false);
+type AvatarScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Avatar'>;
+type AvatarScreenRouteProp = RouteProp<RootStackParamList, 'Avatar'>;
 
-  const getAvatarSource = () => {
+interface Contact {
+  id: number;
+  name: string;
+  phone: string;
+  photo?: string;
+}
+
+interface AvatarScreenProps {
+  route: AvatarScreenRouteProp;
+  navigation: AvatarScreenNavigationProp;
+}
+
+const AvatarScreen: React.FC<AvatarScreenProps> = ({ route, navigation }) => {
+  const { contact, onAvatarSelect } = route.params;
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const getAvatarSource = (): ImageSourcePropType => {
     if (selectedImage) {
       return { uri: selectedImage };
     }
@@ -41,7 +60,7 @@ const AvatarScreen = ({ route, navigation }) => {
     return { uri: `${API_URL}/${photoPath}` };
   };
 
-  const handleSelectFromLibrary = async () => {
+  const handleSelectFromLibrary = async (): Promise<void> => {
     try {
       setLoading(true);
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -70,7 +89,7 @@ const AvatarScreen = ({ route, navigation }) => {
     }
   };
 
-  const handleTakePhoto = async () => {
+  const handleTakePhoto = async (): Promise<void> => {
     try {
       setLoading(true);
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -97,7 +116,7 @@ const AvatarScreen = ({ route, navigation }) => {
     }
   };
 
-  const handleRemovePhoto = () => {
+  const handleRemovePhoto = (): void => {
     Alert.alert(
       'Remove Photo',
       'Are you sure you want to remove the current photo?',
@@ -116,7 +135,7 @@ const AvatarScreen = ({ route, navigation }) => {
     );
   };
 
-  const handleSave = async () => {
+  const handleSave = async (): Promise<void> => {
     try {
       setLoading(true);
       await onAvatarSelect(selectedImage);

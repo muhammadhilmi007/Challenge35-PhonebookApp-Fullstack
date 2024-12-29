@@ -1,33 +1,43 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
+import { Contact, ContactData, ContactsResponse } from '../types';
 
-const API_URL = 'http://192.168.1.9:3001/api'; // Using local IP address for mobile access
+const API_URL = 'http://192.168.1.11:3001/api';
 
-export const getContacts = async (page = 1, limit = 10, sortBy = 'name', sortOrder = 'asc', search = '') => {
+interface PhotoData {
+  uri: string;
+  name: string;
+  type: string;
+}
+
+export const getContacts = async (
+  page: number = 1,
+  limit: number = 10,
+  sortBy: string = 'name',
+  sortOrder: 'asc' | 'desc' = 'asc',
+  search: string = ''
+): Promise<ContactsResponse> => {
   try {
     const response = await axios.get(`${API_URL}/phonebooks`, {
       params: { page, limit, sortBy, sortOrder, name: search }
     });
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching contacts:', error);
     throw error;
   }
 };
 
-export const addContact = async (contact) => {
+export const addContact = async (contact: ContactData): Promise<Contact> => {
   try {
-    // First create contact without avatar
     const response = await axios.post(`${API_URL}/phonebooks`, {
       name: contact.name,
       phone: contact.phone,
     });
 
-    // If contact has an avatar, update it separately
     if (contact.avatar && response.data.id) {
       const formData = new FormData();
       
-      // Get the filename from the URI
-      const filename = contact.avatar.split('/').pop();
+      const filename = contact.avatar.split('/').pop() || 'photo.jpg';
       const match = /\.(\w+)$/.exec(filename);
       const type = match ? `image/${match[1]}` : 'image/jpeg';
       
@@ -35,39 +45,33 @@ export const addContact = async (contact) => {
         uri: contact.avatar,
         name: filename,
         type,
-      });
+      } as unknown as Blob);
 
       await axios.put(`${API_URL}/phonebooks/${response.data.id}/avatar`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-        transformRequest: (data, headers) => {
-          return formData;
-        },
       });
     }
 
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error adding contact:', error);
     throw error;
   }
 };
 
-export const updateContact = async (id, contact) => {
+export const updateContact = async (id: number, contact: ContactData): Promise<Contact> => {
   try {
-    // First update contact details
     const response = await axios.put(`${API_URL}/phonebooks/${id}`, {
       name: contact.name,
       phone: contact.phone,
     });
 
-    // If contact has a new avatar (not a URL), update it separately
     if (contact.avatar && !contact.avatar.startsWith('http')) {
       const formData = new FormData();
       
-      // Get the filename from the URI
-      const filename = contact.avatar.split('/').pop();
+      const filename = contact.avatar.split('/').pop() || 'photo.jpg';
       const match = /\.(\w+)$/.exec(filename);
       const type = match ? `image/${match[1]}` : 'image/jpeg';
       
@@ -75,41 +79,34 @@ export const updateContact = async (id, contact) => {
         uri: contact.avatar,
         name: filename,
         type,
-      });
+      } as unknown as Blob);
 
       await axios.put(`${API_URL}/phonebooks/${id}/avatar`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-        transformRequest: (data, headers) => {
-          return formData;
-        },
       });
     }
 
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating contact:', error);
     throw error;
   }
 };
 
-export const deleteContact = async (id) => {
+export const deleteContact = async (id: number): Promise<boolean> => {
   try {
     const response = await axios.delete(`${API_URL}/phonebooks/${id}`);
     return response.status === 200;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error deleting contact:', error);
     if (error.response) {
-      // The request was made and the server responded with a status code
-      // that falls out of the range of 2xx
       console.error('Error response:', error.response.data);
       throw new Error(error.response.data.message || 'Failed to delete contact');
     } else if (error.request) {
-      // The request was made but no response was received
       throw new Error('No response from server. Please check your connection.');
     } else {
-      // Something happened in setting up the request that triggered an Error
       throw new Error('Error setting up the request');
     }
   }

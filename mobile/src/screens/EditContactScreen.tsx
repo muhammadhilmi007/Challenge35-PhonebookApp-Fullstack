@@ -12,16 +12,34 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { useContacts } from '@hooks/useContacts';
 import Loading from '@components/Loading';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RouteProp } from '@react-navigation/native';
+import { RootStackParamList } from '@types';
 
-const EditContactScreen = ({ route, navigation }) => {
+type EditContactScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'EditContact'>;
+type EditContactScreenRouteProp = RouteProp<RootStackParamList, 'EditContact'>;
+
+interface Contact {
+  id: number;
+  name: string;
+  phone: string;
+  avatar?: string | null;
+}
+
+interface EditContactScreenProps {
+  route: EditContactScreenRouteProp;
+  navigation: EditContactScreenNavigationProp;
+}
+
+const EditContactScreen: React.FC<EditContactScreenProps> = ({ route, navigation }) => {
   const { contact } = route.params;
   const { editContact, loading } = useContacts();
   
-  const [name, setName] = useState(contact.name);
-  const [phone, setPhone] = useState(contact.phone);
-  const [avatar, setAvatar] = useState(contact.avatar || null);
+  const [name, setName] = useState<string>(contact.name);
+  const [phone, setPhone] = useState<string>(contact.phone);
+  const [avatar, setAvatar] = useState<string | null>(contact.avatar || null);
 
-  const handleSave = async () => {
+  const handleSave = async (): Promise<void> => {
     if (!name.trim() || !phone.trim()) {
       Alert.alert('Error', 'Name and phone number are required');
       return;
@@ -38,7 +56,7 @@ const EditContactScreen = ({ route, navigation }) => {
     }
   };
 
-  const handleSelectImage = async () => {
+  const handleSelectImage = async (): Promise<void> => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     
     if (status !== 'granted') {
@@ -53,7 +71,7 @@ const EditContactScreen = ({ route, navigation }) => {
       quality: 0.5,
     });
 
-    if (!result.canceled) {
+    if (!result.canceled && result.assets && result.assets[0]) {
       setAvatar(result.assets[0].uri);
     }
   };

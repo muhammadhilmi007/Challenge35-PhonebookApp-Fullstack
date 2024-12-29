@@ -1,13 +1,27 @@
 import { useState, useCallback } from 'react';
 import { Alert } from 'react-native';
-import { getContacts, addContact, updateContact, deleteContact } from '@services/api';
+import { getContacts, addContact, updateContact, deleteContact } from '../services/api';
+import { Contact, ContactData, ContactsResponse } from '../types';
+
+interface ContactsState extends ContactsResponse {}
 
 export const useContacts = () => {
-  const [contacts, setContacts] = useState({ phonebooks: [], total: 0, page: 1, pages: 1 });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [contacts, setContacts] = useState<ContactsState>({ 
+    phonebooks: [], 
+    total: 0, 
+    page: 1, 
+    pages: 1 
+  });
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const fetchContacts = useCallback(async (page = 1, limit = 10, sortBy = 'name', sortOrder = 'asc', search = '') => {
+  const fetchContacts = useCallback(async (
+    page: number = 1, 
+    limit: number = 10, 
+    sortBy: string = 'name', 
+    sortOrder: 'asc' | 'desc' = 'asc', 
+    search: string = ''
+  ): Promise<void> => {
     setLoading(true);
     try {
       const response = await getContacts(page, limit, sortBy, sortOrder, search);
@@ -32,7 +46,7 @@ export const useContacts = () => {
     }
   }, []);
 
-  const createContact = useCallback(async (contactData) => {
+  const createContact = useCallback(async (contactData: ContactData): Promise<boolean> => {
     setLoading(true);
     try {
       const response = await addContact(contactData);
@@ -50,7 +64,7 @@ export const useContacts = () => {
     }
   }, [fetchContacts]);
 
-  const editContact = useCallback(async (id, contactData) => {
+  const editContact = useCallback(async (id: number, contactData: ContactData): Promise<boolean> => {
     setLoading(true);
     try {
       const response = await updateContact(id, contactData);
@@ -73,7 +87,7 @@ export const useContacts = () => {
     }
   }, []);
 
-  const removeContact = useCallback(async (id) => {
+  const removeContact = useCallback(async (id: number): Promise<boolean> => {
     setLoading(true);
     try {
       const response = await deleteContact(id);
@@ -109,3 +123,6 @@ export const useContacts = () => {
     removeContact,
   };
 };
+
+// Export types for use in other files
+export type { Contact, ContactData };

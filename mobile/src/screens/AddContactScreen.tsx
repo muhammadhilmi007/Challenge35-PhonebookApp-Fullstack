@@ -13,15 +13,26 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { useContacts } from '@hooks/useContacts';
 import Loading from '@components/Loading';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '@types';
 
-const AddContactScreen = ({ navigation }) => {
+type AddContactScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'AddContact'
+>;
+
+interface AddContactScreenProps {
+  navigation: AddContactScreenNavigationProp;
+}
+
+const AddContactScreen: React.FC<AddContactScreenProps> = ({ navigation }) => {
   const { createContact, loading } = useContacts();
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [avatar, setAvatar] = useState(null);
-  const [imageLoading, setImageLoading] = useState(false);
+  const [name, setName] = useState<string>('');
+  const [phone, setPhone] = useState<string>('');
+  const [avatar, setAvatar] = useState<string | null>(null);
+  const [imageLoading, setImageLoading] = useState<boolean>(false);
 
-  const handleSave = async () => {
+  const handleSave = async (): Promise<void> => {
     if (!name.trim() || !phone.trim()) {
       Alert.alert('Error', 'Name and phone number are required');
       return;
@@ -43,7 +54,7 @@ const AddContactScreen = ({ navigation }) => {
     }
   };
 
-  const handleSelectImage = async () => {
+  const handleSelectImage = async (): Promise<void> => {
     try {
       setImageLoading(true);
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -54,7 +65,7 @@ const AddContactScreen = ({ navigation }) => {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.5,

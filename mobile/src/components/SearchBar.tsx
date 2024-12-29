@@ -4,7 +4,9 @@ import {
   TextInput, 
   StyleSheet, 
   Platform,
-  Dimensions
+  Dimensions,
+  NativeSyntheticEvent,
+  TextInputSubmitEditingEventData
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -12,7 +14,13 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const INPUT_HEIGHT = Math.min(Math.max(SCREEN_WIDTH * 0.1, 36), 44); // Responsive height
 const ICON_SIZE = Math.min(Math.max(SCREEN_WIDTH * 0.05, 18), 24); // Responsive icon size
 
-const SearchBar = ({ value, onChangeText, onSubmit }) => {
+interface SearchBarProps {
+  value: string;
+  onChangeText: (text: string) => void;
+  onSubmit: (e: NativeSyntheticEvent<TextInputSubmitEditingEventData>) => void;
+}
+
+const SearchBar: React.FC<SearchBarProps> = ({ value, onChangeText, onSubmit }) => {
   return (
     <View style={styles.container}>
       <View style={styles.searchContainer}>

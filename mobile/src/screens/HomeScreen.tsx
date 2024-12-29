@@ -12,6 +12,8 @@ import {
   ActivityIndicator,
   StatusBar,
   SafeAreaView,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from 'react-native';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faSortAlphaDown, faSortAlphaUp, faUserPlus, faCirclePlus } from '@fortawesome/free-solid-svg-icons';
@@ -20,20 +22,41 @@ import SearchBar from '@components/SearchBar';
 import Loading from '@components/Loading';
 import { useContacts } from '@hooks/useContacts';
 import { useFocusEffect } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '@types';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const HEADER_HEIGHT = Platform.OS === 'ios' ? 88 : 76;
 const ICON_SIZE = Math.min(Math.max(SCREEN_WIDTH * 0.06, 24), 32);
 const ITEMS_PER_PAGE = 10;
 
-const HomeScreen = ({ navigation }) => {
-  const [search, setSearch] = useState('');
+interface Contact {
+  id: number;
+  name: string;
+  phone: string;
+  photo?: string;
+}
+
+interface ContactsResponse {
+  phonebooks: Contact[];
+  pages: number;
+}
+
+type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
+
+interface HomeScreenProps {
+  navigation: HomeScreenNavigationProp;
+}
+
+const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
+  const [search, setSearch] = useState<string>('');
   const { contacts, loading, error, fetchContacts, removeContact, editContact } = useContacts();
-  const [refreshing, setRefreshing] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [sortOrder, setSortOrder] = useState('asc');
-  const [filteredContacts, setFilteredContacts] = useState([]);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [loadingMore, setLoadingMore] = useState<boolean>(false);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [filteredContacts, setFilteredContacts] = useState<Contact[]>([]);
+  const [editingContacts, setEditingContacts] = useState<Set<number>>(new Set());
 
   useFocusEffect(
     useCallback(() => {
@@ -53,47 +76,69 @@ const HomeScreen = ({ navigation }) => {
     }
   }, [contacts, search, sortOrder]);
 
-  const handleSort = () => {
+  const handleSort = (): void => {
     const newSortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
     setSortOrder(newSortOrder);
     setCurrentPage(1);
     fetchContacts(1, ITEMS_PER_PAGE, 'name', newSortOrder, search);
   };
 
-  const handleEdit = (contact) => {
-    navigation.navigate('EditContact', { contact });
+  const handleEdit = (contact: Contact): void => {
+    setEditingContacts(prev => {
+      const newSet = new Set(prev);
+      newSet.add(contact.id);
+      return newSet;
+    });
   };
 
-  const handleDelete = async (id) => {
-    Alert.alert(
-      'Delete Contact',
-      'Are you sure you want to delete this contact?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const success = await removeContact(id);
-              if (!success) {
-                Alert.alert('Error', 'Failed to delete contact. Please try again.');
-              }
-            } catch (error) {
-              console.error('Error deleting contact:', error);
-              Alert.alert('Error', 'Failed to delete contact. Please try again.');
-            }
-          },
-        },
-      ],
-      { cancelable: true }
-    );
+  const handleSaveEdit = async (updatedContact: Contact): Promise<void> => {
+    try {
+      await editContact(updatedContact.id, updatedContact);
+      setEditingContacts(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(updatedContact.id);
+        return newSet;
+      });
+      fetchContacts(currentPage, ITEMS_PER_PAGE, 'name', sortOrder, search);
+    } catch (error) {
+      console.error('Error updating contact:', error);
+      Alert.alert('Error', 'Failed to update contact. Please try again.');
+    }
   };
 
-  const handleAvatarPress = (contact) => {
+  const handleCancelEdit = (contactId: number): void => {
+    setEditingContacts(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(contactId);
+      return newSet;
+    });
+  };
+
+  const handleDelete = async (id: number): Promise<void> => {
+    try {
+      const success = await removeContact(id);
+      if (success) {
+        // Remove from editing state if being edited
+        setEditingContacts(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(id);
+          return newSet;
+        });
+        // Refresh the contacts list
+        fetchContacts(currentPage, ITEMS_PER_PAGE, 'name', sortOrder, search);
+      } else {
+        Alert.alert('Error', 'Failed to delete contact. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error deleting contact:', error);
+      Alert.alert('Error', 'Failed to delete contact. Please try again.');
+    }
+  };
+
+  const handleAvatarPress = (contact: Contact): void => {
     navigation.navigate('Avatar', {
       contact,
-      onAvatarSelect: async (newAvatar) => {
+      onAvatarSelect: async (newAvatar: string | null) => {
         try {
           await editContact(contact.id, { ...contact, avatar: newAvatar });
         } catch (error) {
@@ -104,16 +149,16 @@ const HomeScreen = ({ navigation }) => {
     });
   };
 
-  const handleAddContact = () => {
+  const handleAddContact = (): void => {
     navigation.navigate('AddContact');
   };
 
-  const handleSearch = () => {
+  const handleSearch = (): void => {
     setCurrentPage(1);
     fetchContacts(1, ITEMS_PER_PAGE, 'name', sortOrder, search);
   };
 
-  const handleRefresh = async () => {
+  const handleRefresh = async (): Promise<void> => {
     setRefreshing(true);
     setSearch('');
     setCurrentPage(1);
@@ -121,7 +166,7 @@ const HomeScreen = ({ navigation }) => {
     setRefreshing(false);
   };
 
-  const handleLoadMore = async () => {
+  const handleLoadMore = async (): Promise<void> => {
     if (loadingMore || !contacts || currentPage >= contacts.pages) {
       return;
     }
@@ -138,7 +183,7 @@ const HomeScreen = ({ navigation }) => {
     }
   };
 
-  const handleScroll = (event) => {
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>): void => {
     const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
     const paddingToBottom = 20;
     const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= 
@@ -164,7 +209,7 @@ const HomeScreen = ({ navigation }) => {
     return <Loading />;
   }
 
-  const EmptyComponent = () => (
+  const EmptyComponent = (): JSX.Element => (
     <View style={styles.emptyContainer}>
       <Text style={styles.emptyText}>
         {search ? 'No contacts found matching your search' : 'No contacts yet'}
@@ -229,6 +274,9 @@ const HomeScreen = ({ navigation }) => {
                   onEdit={() => handleEdit(contact)}
                   onDelete={() => handleDelete(contact.id)}
                   onAvatarPress={() => handleAvatarPress(contact)}
+                  isEditing={editingContacts.has(contact.id)}
+                  onSave={handleSaveEdit}
+                  onCancel={() => handleCancelEdit(contact.id)}
                 />
               ))}
               {loadingMore && (
