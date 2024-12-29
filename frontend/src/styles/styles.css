@@ -11,6 +11,12 @@
   padding: 20px;
 }
 
+.loading-trigger {
+text-align: center;
+color : #b8860b;
+font-weight: bold;
+}
+
 .add-view h2 {
   font-size: 24px;
   margin-bottom: 30px;

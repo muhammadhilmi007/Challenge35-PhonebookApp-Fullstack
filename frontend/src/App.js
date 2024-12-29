@@ -21,21 +21,28 @@ const useContacts = () => {
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  // 2.1 State untuk pengurutan (Inisialisasi State di useContacts Hook)
   const [sortBy, setSortBy] = useState(() => {
     return sessionStorage.getItem('contactSortBy') || 'name';
   });
   const [sortOrder, setSortOrder] = useState(() => {
     return sessionStorage.getItem('contactSortOrder') || 'asc';
   });
+
+  // 3.1 State untuk pencarian (State pencarian diinisialisasi dari sessionStorage)
   const [search, setSearch] = useState(() => {
     const savedSearch = sessionStorage.getItem('contactSearch');
+    // 3.2 Memeriksa status aktif pencarian dari sessionStorage
     const isActive = sessionStorage.getItem('searchActive');
     return isActive ? (savedSearch || '') : '';
   });
 
+  // 3.5 Memperbarui state pencarian, dan memanggil Handler untuk pencarian (Handler pencarian yang menggunakan useCallback)
   const handleSearch = useCallback((value) => {
     setSearch(value);
+    // 3.6 Menyimpan nilai pencarian ke sessionStorage
     sessionStorage.setItem('contactSearch', value || '');
+    // 3.7 Mengatur status pencarian aktif
     if (value) {
       sessionStorage.setItem('searchActive', 'true');
     } else {
@@ -43,6 +50,7 @@ const useContacts = () => {
     }
   }, []);
 
+  // 2.2 Handler untuk pengurutan (Inisialisasi State di useContacts Hook)
   const handleSort = useCallback((field, order) => {
     sessionStorage.setItem('contactSortBy', field);
     sessionStorage.setItem('contactSortOrder', order);
@@ -79,24 +87,25 @@ const useContacts = () => {
       const { phonebooks, ...pagination } = await api.getContacts(
         currentPage, 
         10, 
-        sortBy, 
+        sortBy, // 2.8 API Call dengan parameter pengurutan, Backend melakukan pengurutan data, dan return data terurut
         sortOrder, 
-        search
+        search // 3.8 API Call dengan parameter pencarian, Backend melakukan pencarian data, dan mengembalikan hasil pencarian
       );
 
       if (Array.isArray(phonebooks)) {
         if (loadMore) {
           setContacts(prev => {
             const existingIds = new Set(prev.map(contact => contact.id));
-            const newContacts = phonebooks.filter(contact => !existingIds.has(contact.id));
+            const newContacts = phonebooks.filter(contact => !existingIds.has(contact.id)); // 3.9 Update contacts state dengan hasil pencarian
             return [...prev, ...newContacts];
           });
         } else {
-          setContacts(phonebooks);
+          setContacts(phonebooks); // 2.9 Update contacts state dengan data terurut (Data Fetching)
         }
         
-        setHasMore(currentPage < pagination.pages);
-        setPage(currentPage);
+        setHasMore(currentPage < pagination.pages); // 2.10/3.10 Update pagination state
+        setPage(currentPage); // 2.11/3.11 Trigger re-render, memicu pemuatan ulang kontak secara bertahap atau memuat kontak baru.
+        console.log('API Response UseContacts:', phonebooks);
       } else {
         throw new Error('Invalid data structure received from API');
       }
@@ -135,7 +144,7 @@ const useContacts = () => {
   };
 };
 
-// Komponen utama untuk halaman utama
+// 1.3 Komponen utama untuk halaman utama (Menginisialisasi state dan fungsi melalui useContacts)
 const MainPage = () => {
   // Menggunakan hook useNavigate untuk navigasi
   const navigate = useNavigate();
@@ -178,9 +187,10 @@ const MainPage = () => {
   // Fungsi untuk mengedit kontak
   const handleEdit = async (id, updatedContact) => {
     try {
-      // Memanggil API untuk memperbarui kontak
+      // 4.9 Memanggil API untuk memperbarui kontak
       await api.updateContact(id, updatedContact);
 
+      // !! Update Contact dalam mode search dan sort.
       // Cek apakah sedang dalam mode pencarian
       if (search) {
         // Cek apakah kontak yang diupdate masih sesuai dengan kriteria pencarian
@@ -197,11 +207,12 @@ const MainPage = () => {
       }
 
       // Jika tidak dalam mode pencarian atau masih match, update seperti biasa
-      const updatedContacts = contacts.map((contact) =>
+      const updatedContacts = contacts.map((contact) => // 4.10 Memperbarui state contacts setelah edit berhasil
         contact.id === id ? { ...contact, ...updatedContact } : contact
       );
+      // 4.11 Memperbarui UI dengan data terbaru
       refreshContacts();
-      setContacts(updatedContacts);
+      setContacts(updatedContacts); 
     } catch (error) {
       console.error("Error updating contact:", error);
     }
@@ -277,6 +288,7 @@ const MainPage = () => {
         onSort={handleSort}
         onAdd={handleAdd}
       />
+      {/* 1.4 Meneruskan data dan callback ke ContactList */}
       <ContactList
         contacts={contacts}
         loading={loading}
@@ -292,9 +304,10 @@ const MainPage = () => {
   );
 };
 
-// Komponen utama App
+// 1.1 Aplikasi dimulai dengan setup Router
 const App = () => {
-  // Fungsi untuk menambah kontak baru
+  // !! State Management addContact
+  // 5.9 Fungsi untuk menambah kontak baru
   const handleAdd = async (contact) => {
     try {
       // Memanggil API untuk menambah kontak
@@ -309,6 +322,7 @@ const App = () => {
   return (
     <Router>
       <Routes>
+        {/* 1.2 MainPage dirender sebagai Halaman utama */}
         <Route path="/" element={<MainPage />} />
         <Route path="/add" element={<AddContact onAdd={handleAdd} />} />
         <Route path="/avatar/:id" element={<AvatarUpload />} />

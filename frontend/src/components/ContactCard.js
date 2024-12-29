@@ -4,11 +4,11 @@ import { BsPencilSquare, BsTrash } from 'react-icons/bs';
 
 // Komponen ContactCard menerima props contact, onEdit, onDelete, dan onAvatarUpdate
 const ContactCard = ({ contact, onEdit, onDelete, onAvatarUpdate }) => {
-  // State untuk mengontrol mode edit
+  // 4.1 Menginisialisasi state untuk mode edit
   const [isEditing, setIsEditing] = useState(false);
   // State untuk mengontrol tampilan konfirmasi hapus
   const [showConfirm, setShowConfirm] = useState(false);
-  // State untuk menyimpan data form saat mengedit
+  // 4.2 Menyiapkan form data dengan nilai kontak saat ini
   const [form, setForm] = useState({
     name: contact.name,
     phone: contact.phone
@@ -96,6 +96,7 @@ const ContactCard = ({ contact, onEdit, onDelete, onAvatarUpdate }) => {
               <p>{contact.phone}</p>
             </div>
             <div className="contact-actions">
+              {/* Tombol untuk Mengaktifkan mode edit */}
               <button onClick={() => setIsEditing(true)} aria-label="Edit contact">
                 <BsPencilSquare />
               </button>

@@ -1,43 +1,32 @@
 // Komponen ContactList: Menampilkan daftar kontak dengan fitur infinite scrolling
-
 import React, { useEffect, useRef } from 'react';
-// Mengimpor komponen ContactCard
 import ContactCard from './ContactCard';
 
-// Mendefinisikan komponen ContactList dengan props yang diperlukan
 const ContactList = ({ contacts, onEdit, onDelete, onAvatarUpdate, onLoadMore, hasMore }) => {
-  // Membuat ref untuk elemen terakhir dalam daftar
-  const listRef = useRef();
+  const lastContactRef = useRef();
 
-  // Menggunakan useEffect untuk menangani infinite scrolling
+  // 1.5 Setup Intersection Observer
   useEffect(() => {
-    // Membuat Intersection Observer
     const observer = new IntersectionObserver(
       (entries) => {
-        // Jika elemen terakhir terlihat dan masih ada kontak lain untuk dimuat
+        // 1.6 Deteksi Scroll
         if (entries[0].isIntersecting && hasMore) {
-          // Memanggil fungsi untuk memuat lebih banyak kontak
+          // 1.7 Trigger Load More
           onLoadMore();
         }
       },
-      { threshold: 0.5 } // Mengatur threshold ke 50% visibilitas
+      { threshold: 0.5 }
     );
 
-    // Jika ref elemen terakhir ada, mulai mengamatinya
-    if (listRef.current) {
-      observer.observe(listRef.current);
+    // 1.8 Observe Last Contact
+    if (lastContactRef.current) {
+      observer.observe(lastContactRef.current);
     }
 
-    // Membersihkan observer saat komponen di-unmount
-    return () => {
-      if (listRef.current) {
-        // eslint-disable-next-line
-        observer.unobserve(listRef.current);
-      }
-    };
-  }, [hasMore, onLoadMore]); // Efek akan dijalankan ulang jika hasMore atau onLoadMore berubah
+    // 1.9 Cleanup
+    return () => observer.disconnect();
+  }, [hasMore, onLoadMore]);
 
-  // Jika tidak ada kontak, tampilkan pesan
   if (!contacts.length) {
     return (
       <div className="contact-list-empty">
@@ -46,49 +35,70 @@ const ContactList = ({ contacts, onEdit, onDelete, onAvatarUpdate, onLoadMore, h
     );
   }
 
-  // Render daftar kontak
+  // 1.10/3.12 Render Contact List
   return (
     <div className="contact-list">
-      {/* Memetakan setiap kontak ke komponen ContactCard */}
-      {contacts.map((contact) => (
-        <ContactCard
-          key={contact.id} // Menggunakan ID kontak
-          contact={contact}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          onAvatarUpdate={onAvatarUpdate}
-        />
+      {contacts.map((contact, index) => (
+        <div 
+          key={contact.id} 
+          ref={index === contacts.length - 1 ? lastContactRef : null}
+        >
+          <ContactCard
+            contact={contact}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onAvatarUpdate={onAvatarUpdate}
+          />
+        </div>
       ))}
-      {/* Jika masih ada kontak lain, tampilkan elemen pemicu loading */}
-      {hasMore && <div ref={listRef} className="loading-trigger">Loading more...</div>}
+      {hasMore && <div ref={lastContactRef} className="loading-trigger">Loading more...</div>}
     </div>
   );
 };
 
-// Mengekspor komponen ContactList
 export default ContactList;
 
 /*
-Penjelasan:
-1. Komponen ContactList bertanggung jawab untuk menampilkan daftar kontak.
-2. Menggunakan Intersection Observer API untuk implementasi infinite scrolling.
-3. Menampilkan pesan jika tidak ada kontak yang tersedia.
-4. Merender setiap kontak menggunakan komponen ContactCard.
+Alur Teknis Detail:
 
-Alur dan Logika:
-1. Komponen menerima props: contacts, onEdit, onDelete, onAvatarUpdate, onLoadMore, dan hasMore.
-2. useEffect digunakan untuk mengatur Intersection Observer.
-3. Observer memantau elemen terakhir dalam daftar.
-4. Ketika elemen terakhir terlihat dan masih ada kontak lain (hasMore true), onLoadMore dipanggil.
-5. Daftar kontak dirender menggunakan map, membuat ContactCard untuk setiap kontak.
-6. Jika hasMore true, elemen loading ditampilkan di akhir daftar.
+Inisialisasi Observer:
 
-Keterhubungan dengan Backend:
-1. Data kontak (contacts) diterima sebagai prop, biasanya diambil dari backend melalui API call.
-2. onLoadMore biasanya memicu permintaan ke backend untuk mengambil kontak tambahan.
-3. Fungsi onEdit, onDelete, dan onAvatarUpdate umumnya terhubung ke operasi backend untuk memperbarui data kontak.
-4. hasMore menunjukkan apakah masih ada data di backend yang belum diambil.
+* useEffect hook dijalankan saat komponen mount
+* Membuat Intersection Observer dengan threshold 0.5 (50% visibility)
+* Observasi Elemen:
+	+ lastContactRef ditetapkan ke kontak terakhir
+	+ Observer mulai memantau elemen tersebut
 
-Komponen ini menjembatani antara tampilan frontend dan data dari backend, memungkinkan 
-loading data secara bertahap dan interaksi pengguna dengan kontak individual.
+Deteksi Scroll:
+
+* Observer mendeteksi ketika elemen terakhir visible
+* Memeriksa kondisi hasMore sebelum memuat data baru
+
+Load More Mechanism:
+
+* onLoadMore() dipanggil ketika kondisi terpenuhi
+* Memicu API call di useContacts hook
+* Data baru ditambahkan ke state contacts
+
+Render Cycle:
+
+* Contacts dimap menjadi ContactCard components
+* Ref ditetapkan ke elemen terakhir
+* UI diupdate dengan data baru
+
+Cleanup:
+
+* Observer dibersihkan saat komponen unmount
+* Mencegah memory leak
+
+Optimisasi dan Best Practices:
+
+* Menggunakan useRef untuk referensi DOM stabil
+* Implementasi infinite scroll yang efisien
+* Cleanup yang proper untuk mencegah memory leaks
+* Penggunaan threshold untuk trigger yang tepat
+* Penanganan kasus empty state
+
+Alur ini mengikuti prinsip React untuk unidirectional data flow dan component lifecycle management, sambil mengimplementasikan fitur infinite scrolling yang optimal
+
 */

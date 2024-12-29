@@ -6,30 +6,31 @@ import { api } from '../services/api';
 // Definisikan komponen EditContact sebagai functional component
 // Menerima props: contact (data kontak yang akan diedit), onSave (fungsi callback setelah berhasil menyimpan), dan onCancel (fungsi callback untuk membatalkan)
 const EditContact = ({ contact, onSave, onCancel }) => {
-  // State untuk menyimpan data form
+  // 4.3 Membuat form edit dengan data kontak yang ada dalam state
   const [form, setForm] = useState({
     name: contact.name,  // Inisialisasi dengan nama kontak yang ada
     phone: contact.phone // Inisialisasi dengan nomor telepon kontak yang ada
   });
-  // State untuk menyimpan pesan error
+  // 4.4 Mengelola state error untuk validasi
   const [error, setError] = useState('');
 
   // Fungsi untuk menangani submit form
   const handleSubmit = async (e) => {
+    // 4.5 Mencegah form submission default
     e.preventDefault(); // Mencegah reload halaman saat form disubmit
     
-    // Validasi: memastikan nama dan nomor telepon tidak kosong
+    // 4.6 Validasi: memastikan nama dan nomor telepon tidak kosong
     if (!form.name.trim() || !form.phone.trim()) {
       setError('Nama dan nomor telepon harus diisi');
       return;
     }
 
     try {
-      // Memanggil API untuk memperbarui kontak
+      // 4.7 Memanggil API untuk memperbarui kontak
       const updatedContact = await api.updateContact(contact.id, form);
       onSave(updatedContact); // Memanggil fungsi callback onSave dengan data kontak yang telah diperbarui
     } catch (err) {
-      // Menangani error jika terjadi kesalahan saat memperbarui kontak
+      // 4.8 Menangani error jika terjadi kesalahan saat memperbarui kontak
       setError(err.response?.data?.error || 'Gagal memperbarui kontak');
     }
   };

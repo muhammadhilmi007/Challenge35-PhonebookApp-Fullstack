@@ -1,26 +1,29 @@
 // Mengimpor modul yang diperlukan dari React dan react-router-dom
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-
+// !! Inisiasi Add Contact
 // Mendefinisikan komponen AddContact yang menerima prop onAdd
 const AddContact = ({ onAdd }) => {
-  // State untuk menyimpan data formulir
+  // 5.1 State untuk menyimpan data formulir
   const [form, setForm] = useState({ name: '', phone: '' });
-  // State untuk menyimpan pesan error
+  // 5.2 State untuk menyimpan pesan error
   const [error, setError] = useState('');
-  // State untuk menandai apakah formulir sedang disubmit
+  // 5.3 State untuk menandai apakah formulir sedang disubmit
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Hook untuk navigasi
   const navigate = useNavigate();
 
+  // !! Navigation Handling
   // Fungsi untuk menangani kembali ke halaman utama
   const handleCancel = () => {
-    // Preserve the existing search and sort state when navigating back
+    // 5.10 Preserve the existing search and sort state when navigating back
     const searchParams = new URLSearchParams();
     const search = sessionStorage.getItem('contactSearch');
     const sortBy = sessionStorage.getItem('contactSortBy');
     const sortOrder = sessionStorage.getItem('contactSortOrder');
     const isSearchActive = sessionStorage.getItem('searchActive');
+
+    // 5.11 Build the query string with the existing search and sort state
 
     if (isSearchActive && search) {
       searchParams.append('search', search);
@@ -32,32 +35,35 @@ const AddContact = ({ onAdd }) => {
       searchParams.append('sortOrder', sortOrder);
     }
 
+    // 5.12 Navigate with preserved search and sort state
     const queryString = searchParams.toString();
     navigate(`/${queryString ? `?${queryString}` : ''}`, { replace: true });
   };
 
-  // Fungsi untuk menangani submit formulir
+  // !! Form Handling dan Validasi
+  // 5.4 Fungsi untuk menangani submit formulir
   const handleSubmit = async (e) => {
     e.preventDefault(); // Mencegah perilaku default form submit
     setError(''); // Mengosongkan pesan error
     setIsSubmitting(true); // Menandai bahwa proses submit dimulai
 
-    // Validasi input
+    // 5.5 Validasi input
     if (!form.name.trim() || !form.phone.trim()) {
       setError('Name and phone number are required');
       setIsSubmitting(false);
       return;
     }
 
+    // !! API Integration
     try {
-      // Mencoba menambahkan kontak baru
+      // 5.6 Mencoba menambahkan kontak baru
       await onAdd(form);
       navigate('/'); // Navigasi ke halaman utama jika berhasil
     } catch (error) {
-      // Menangani error jika gagal menambahkan kontak
+      // 5.7 Menangani error jika gagal menambahkan kontak
       setError(error.message || 'Error adding contact');
     } finally {
-      // Mengatur isSubmitting kembali ke false setelah proses selesai
+      // 5.8 Mengatur isSubmitting kembali ke false setelah proses selesai
       setIsSubmitting(false);
     }
   };

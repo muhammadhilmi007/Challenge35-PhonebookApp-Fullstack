@@ -1,35 +1,35 @@
-// Impor modul dan komponen yang diperlukan
 import React, { useState } from 'react';
 import { BsFillPersonPlusFill, BsSearch } from "react-icons/bs";
 import { FaSortAlphaUpAlt, FaSortAlphaDownAlt } from "react-icons/fa";
 
 // Komponen SearchBar dengan props yang diterima
 const SearchBar = ({ value = '', onChange, onSort, onAdd }) => {
-  // State untuk menyimpan urutan pengurutan (asc/desc), diinisialisasi dari sessionStorage
+  // 2.3 State untuk menyimpan urutan pengurutan (asc/desc), diinisialisasi dari sessionStorage (Implementasi UI di SearchBar Component)
   const [sortOrder, setSortOrder] = useState(() => {
-    return sessionStorage.getItem('contactSortOrder') || 'asc';
+    return sessionStorage.getItem('contactSortOrder') || 'asc'; // Default values: sortBy = 'name', sortOrder = 'asc'
   });
 
-  // Fungsi untuk menangani perubahan urutan pengurutan
+  // 2.4 User mengklik tombol sort di SearchBar, dan Ter-trigger Fungsi untuk menangani perubahan urutan pengurutan (Implementasi UI di SearchBar Component)
   const handleSort = () => {
-    // Mengubah urutan pengurutan
+    // 2.5 Icon berubah sesuai arah pengurutan (asc/desc)
     const newSortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+    // 2.6 Update local state dan sessionStorage
     setSortOrder(newSortOrder);
-    // Memanggil fungsi onSort dengan parameter nama dan urutan baru
+    // 2.7 Memanggil fungsi onSort dengan parameter nama dan urutan baru
     onSort('name', newSortOrder);
   };
 
-  // Fungsi untuk menangani perubahan input pencarian
+  // 3.3 Menangkap perubahan input dari user
   const handleSearchChange = (e) => {
     const newValue = e.target.value;
-    // Memanggil fungsi onChange dengan nilai baru
+    // 3.4 Meneruskan nilai ke handler utama
     onChange(newValue);
   };
 
   // Render komponen
   return (
     <div className="search-bar">
-      {/* Tombol pengurutan */}
+      {/* 2.1 Tombol pengurutan */}
       <button onClick={handleSort} className="sort-button" aria-label="Sort contacts">
         {/* Menampilkan ikon sesuai dengan urutan pengurutan saat ini */}
         {sortOrder === 'asc' ? <FaSortAlphaDownAlt /> : <FaSortAlphaUpAlt />}
@@ -47,7 +47,7 @@ const SearchBar = ({ value = '', onChange, onSort, onAdd }) => {
           aria-label="Search contacts"
         />
       </div>
-      {/* Tombol tambah kontak baru */}
+      {/* // !! Tombol tambah kontak baru */}
       <button className="add-button" onClick={onAdd} aria-label="Add new contact">
         <BsFillPersonPlusFill />
       </button>
