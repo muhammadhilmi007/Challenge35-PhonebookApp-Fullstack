@@ -10,7 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { useContacts } from '@hooks/useContacts';
+import { useContactsRedux as useContacts } from '@hooks/useContactsRedux';
 import Loading from '@components/Loading';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';

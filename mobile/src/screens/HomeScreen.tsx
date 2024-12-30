@@ -20,7 +20,7 @@ import { faSortAlphaDown, faSortAlphaUp, faUserPlus, faCirclePlus } from '@forta
 import ContactCard from '@components/ContactCard';
 import SearchBar from '@components/SearchBar';
 import Loading from '@components/Loading';
-import { useContacts } from '@hooks/useContacts';
+import { useContactsRedux as useContacts } from '@hooks/useContactsRedux';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@types';
@@ -57,28 +57,60 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [filteredContacts, setFilteredContacts] = useState<Contact[]>([]);
   const [editingContacts, setEditingContacts] = useState<Set<number>>(new Set());
+  const [lastSearchParams, setLastSearchParams] = useState<{
+    search: string;
+    sortOrder: 'asc' | 'desc';
+    page: number;
+  }>({ search: '', sortOrder: 'asc', page: 1 });
 
   useFocusEffect(
     useCallback(() => {
-      fetchContacts(1, ITEMS_PER_PAGE, 'name', sortOrder, search);
-      setCurrentPage(1);
-    }, [fetchContacts, sortOrder, search])
+      // When screen comes into focus, use the last search parameters
+      const loadContacts = () => {
+        fetchContacts(
+          lastSearchParams.page,
+          ITEMS_PER_PAGE,
+          'name',
+          lastSearchParams.sortOrder,
+          lastSearchParams.search
+        );
+      };
+      loadContacts();
+    }, [fetchContacts, lastSearchParams])
   );
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      if (contacts?.phonebooks) {
+        setLastSearchParams({
+          search,
+          sortOrder,
+          page: currentPage
+        });
+        fetchContacts(currentPage, ITEMS_PER_PAGE, 'name', sortOrder, search);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [search, sortOrder]);
+
+  useEffect(() => {
     if (contacts?.phonebooks) {
-      const filtered = contacts.phonebooks.filter(contact =>
-        contact.name.toLowerCase().includes(search.toLowerCase())
-      );
-      setFilteredContacts(filtered.sort((a, b) => 
+      const filtered = [...contacts.phonebooks].sort((a, b) => 
         sortOrder === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)
-      ));
+      );
+      setFilteredContacts(filtered);
     }
-  }, [contacts, search, sortOrder]);
+  }, [contacts?.phonebooks, sortOrder]);
 
   const handleSort = (): void => {
     const newSortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
     setSortOrder(newSortOrder);
+    setLastSearchParams(prev => ({
+      ...prev,
+      sortOrder: newSortOrder,
+      page: 1
+    }));
     setCurrentPage(1);
     fetchContacts(1, ITEMS_PER_PAGE, 'name', newSortOrder, search);
   };
@@ -155,6 +187,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   const handleSearch = (): void => {
     setCurrentPage(1);
+    setLastSearchParams(prev => ({
+      ...prev,
+      search,
+      page: 1
+    }));
     fetchContacts(1, ITEMS_PER_PAGE, 'name', sortOrder, search);
   };
 
@@ -162,18 +199,24 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     setRefreshing(true);
     setSearch('');
     setCurrentPage(1);
+    const newParams = { search: '', sortOrder, page: 1 };
+    setLastSearchParams(newParams);
     await fetchContacts(1, ITEMS_PER_PAGE, 'name', sortOrder);
     setRefreshing(false);
   };
 
   const handleLoadMore = async (): Promise<void> => {
-    if (loadingMore || !contacts || currentPage >= contacts.pages) {
+    if (loadingMore || !contacts || currentPage >= contacts.pages || loading) {
       return;
     }
 
     setLoadingMore(true);
     const nextPage = currentPage + 1;
     try {
+      setLastSearchParams(prev => ({
+        ...prev,
+        page: nextPage
+      }));
       await fetchContacts(nextPage, ITEMS_PER_PAGE, 'name', sortOrder, search);
       setCurrentPage(nextPage);
     } catch (error) {
@@ -183,16 +226,16 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     }
   };
 
-  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>): void => {
+  const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>): void => {
     const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
     const paddingToBottom = 20;
     const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= 
       contentSize.height - paddingToBottom;
 
-    if (isCloseToBottom) {
+    if (isCloseToBottom && !loadingMore && !loading) {
       handleLoadMore();
     }
-  };
+  }, [loadingMore, loading, handleLoadMore]);
 
   if (error) {
     return (

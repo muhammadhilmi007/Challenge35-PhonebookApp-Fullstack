@@ -1,4 +1,5 @@
 import React from 'react';
+import { Provider } from 'react-redux';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
@@ -8,6 +9,7 @@ import AddContactScreen from './src/screens/AddContactScreen';
 import EditContactScreen from './src/screens/EditContactScreen';
 import AvatarScreen from './src/screens/AvatarScreen';
 import { RootStackParamList } from './src/types';
+import store from './src/store';
 
 // Define the type for the contact object
 export interface Contact {
@@ -33,51 +35,53 @@ const styles = StyleSheet.create({
 
 const App: React.FC = () => {
   return (
-    <NavigationContainer>
-      <StatusBar style="light" />
-      <Stack.Navigator
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: '#fff' },
-        }}
-      >
-        <Stack.Screen 
-          name="Home" 
-          component={HomeScreen}
-        />
-        <Stack.Screen 
-          name="AddContact" 
-          component={AddContactScreen}
-          options={{
-            headerShown: true,
-            title: 'Add New Contact',
-            headerStyle: styles.headerStyle,
-            headerTitleStyle: styles.headerTitleStyle,
-            headerTintColor: '#007AFF',
-          }}
-        />
-        <Stack.Screen 
-          name="EditContact" 
-          component={EditContactScreen}
-          options={{
-            headerShown: true,
-            title: 'Edit Contact',
-            headerStyle: styles.headerStyle,
-            headerTitleStyle: styles.headerTitleStyle,
-            headerTintColor: '#007AFF',
-          }}
-        />
-        <Stack.Screen 
-          name="Avatar" 
-          component={AvatarScreen}
-          options={{
+    <Provider store={store}>
+      <NavigationContainer>
+        <StatusBar style="light" />
+        <Stack.Navigator
+          screenOptions={{
             headerShown: false,
-            presentation: 'modal',
-            contentStyle: { backgroundColor: '#000' },
+            contentStyle: { backgroundColor: '#fff' },
           }}
-        />
-      </Stack.Navigator>
-    </NavigationContainer>
+        >
+          <Stack.Screen 
+            name="Home" 
+            component={HomeScreen}
+          />
+          <Stack.Screen 
+            name="AddContact" 
+            component={AddContactScreen}
+            options={{
+              headerShown: true,
+              title: 'Add New Contact',
+              headerStyle: styles.headerStyle,
+              headerTitleStyle: styles.headerTitleStyle,
+              headerTintColor: '#007AFF',
+            }}
+          />
+          <Stack.Screen 
+            name="EditContact" 
+            component={EditContactScreen}
+            options={{
+              headerShown: true,
+              title: 'Edit Contact',
+              headerStyle: styles.headerStyle,
+              headerTitleStyle: styles.headerTitleStyle,
+              headerTintColor: '#007AFF',
+            }}
+          />
+          <Stack.Screen 
+            name="Avatar" 
+            component={AvatarScreen}
+            options={{
+              headerShown: false,
+              presentation: 'modal',
+              contentStyle: { backgroundColor: '#000' },
+            }}
+          />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </Provider>
   );
 };
 
