@@ -15,6 +15,7 @@ const SearchBar = ({ value = '', onChange, onSort, onAdd }) => {
     const newSortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
     // 2.6 Update local state dan sessionStorage
     setSortOrder(newSortOrder);
+    sessionStorage.setItem('contactSortOrder', newSortOrder);
     // 2.7 Memanggil fungsi onSort dengan parameter nama dan urutan baru
     onSort('name', newSortOrder);
   };

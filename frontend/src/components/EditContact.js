@@ -83,7 +83,7 @@ const EditContact = ({ contact, onSave, onCancel }) => {
         {/* Tombol aksi */}
         <div className="form-actions">
           <button type="submit" className="save-button">
-            Simpan Perubahan
+            Simpan
           </button>
           <button 
             type="button" 

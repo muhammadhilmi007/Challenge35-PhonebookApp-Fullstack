@@ -22,7 +22,7 @@ const ContactCard = ({ contact, onEdit, onDelete, onAvatarUpdate }) => {
       // Menonaktifkan mode edit setelah berhasil menyimpan
       setIsEditing(false);
     } catch (error) {
-      console.error('Error updating contact:', error);
+      console.log('Error updating contact:', error);
     }
   };
 
@@ -35,9 +35,9 @@ const ContactCard = ({ contact, onEdit, onDelete, onAvatarUpdate }) => {
   const confirmDelete = async () => {
     try {
       // Memanggil fungsi onDelete yang diterima dari props
-      onDelete(contact.id);
+      await onDelete(contact.id);
     } catch (error) {
-      console.error('Error deleting contact:', error);
+      console.log('Error deleting contact:', error);
     } finally {
       // Menutup dialog konfirmasi setelah selesai
       setShowConfirm(false);

@@ -25,15 +25,15 @@ const phonebookController = {
       const { count, rows } = await Phonebook.findAndCountAll({
         where: searchCondition,
         order: [[sortBy, sortOrder.toUpperCase()]],
-        limit: parseInt(limit),
-        offset: parseInt(offset)
+        limit: +limit,
+        offset: +offset
       });
 
       // Kirim respons JSON dengan hasil pencarian dan informasi paginasi
-      res.json({
+      res.send({
         phonebooks: rows,
-        page: parseInt(page),
-        limit: parseInt(limit),
+        page: +page,
+        limit: +limit,
         pages: Math.ceil(count / limit),
         total: count
       });
@@ -51,7 +51,7 @@ const phonebookController = {
       // Buat kontak baru di database
       const contact = await Phonebook.create({ name, phone });
       // Kirim respons sukses dengan data kontak yang baru dibuat
-      res.status(201).json(contact);
+      res.status(201).send(contact);
     } catch (error) {
       // Tangani kesalahan dan kirim respons error
       res.status(400).json({ error: error.message });
@@ -76,7 +76,7 @@ const phonebookController = {
       // Perbarui kontak dengan data baru
       await contact.update({ name, phone });
       // Kirim respons sukses dengan data kontak yang diperbarui
-      res.status(201).json(contact);
+      res.status(201).send(contact);
     } catch (error) {
       // Tangani kesalahan dan kirim respons error
       res.status(400).json({ error: error.message });
@@ -102,7 +102,7 @@ const phonebookController = {
       res.status(200).json({ message: 'Contact deleted successfully' });
     } catch (error) {
       // Tangani kesalahan dan kirim respons error
-      res.status(500).json({ error: 'Internal server error' });
+      res.status(500).json({ error: error.message });
     }
   },
 
@@ -120,7 +120,7 @@ const phonebookController = {
       }
 
       // Kirim respons dengan data kontak
-      res.json(contact);
+      res.send(contact);
     } catch (error) {
       // Tangani kesalahan dan kirim respons error
       res.status(500).json({ error: error.message });
@@ -153,7 +153,7 @@ const phonebookController = {
       // Perbarui data kontak dengan foto baru
       await contact.update({ photo });
       // Kirim respons sukses dengan data kontak yang diperbarui
-      res.status(201).json(contact);
+      res.status(201).send(contact);
     } catch (error) {
       // Tangani kesalahan dan kirim respons error
       res.status(400).json({ error: error.message });

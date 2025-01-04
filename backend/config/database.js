@@ -1,10 +1,25 @@
-// const { Sequelize } = require('sequelize');
-// const config = require('./config.json');
+const { Sequelize } = require('sequelize');
+const config = require('./config.json');
 
-// const sequelize = new Sequelize(config.development.database, config.development.username, config.development.password, {
-//   host: config.development.host,
-//   dialect: config.development.dialect,
-//   logging: config.development.logging
-// });
+// Get the current environment, default to development if not specified
+const env = process.env.NODE_ENV || 'development';
 
-// module.exports = sequelize;
+// Get the configuration for the current environment
+const currentConfig = config[env];
+
+if (!currentConfig) {
+  throw new Error(`Configuration for environment "${env}" not found!`);
+}
+
+const sequelize = new Sequelize(
+  currentConfig.database,
+  currentConfig.username,
+  currentConfig.password,
+  {
+    host: currentConfig.host,
+    dialect: currentConfig.dialect,
+    logging: currentConfig.logging
+  }
+);
+
+module.exports = sequelize;

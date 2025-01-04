@@ -33,7 +33,7 @@ const AvatarUpload = () => {
         }
       } catch (err) {
         setError('Gagal mengambil informasi kontak');
-        console.error('Error mengambil kontak:', err);
+        console.log('Error mengambil kontak:', err);
       }
     };
     fetchContact();

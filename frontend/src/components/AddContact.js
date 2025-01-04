@@ -1,55 +1,28 @@
 // Mengimpor modul yang diperlukan dari React dan react-router-dom
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 // !! Inisiasi Add Contact
 // Mendefinisikan komponen AddContact yang menerima prop onAdd
 const AddContact = ({ onAdd }) => {
   // 5.1 State untuk menyimpan data formulir
-  const [form, setForm] = useState({ name: '', phone: '' });
+  const [form, setForm] = useState({ name: "", phone: "" });
   // 5.2 State untuk menyimpan pesan error
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   // 5.3 State untuk menandai apakah formulir sedang disubmit
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Hook untuk navigasi
   const navigate = useNavigate();
 
-  // !! Navigation Handling
-  // Fungsi untuk menangani kembali ke halaman utama
-  const handleCancel = () => {
-    // 5.10 Preserve the existing search and sort state when navigating back
-    const searchParams = new URLSearchParams();
-    const search = sessionStorage.getItem('contactSearch');
-    const sortBy = sessionStorage.getItem('contactSortBy');
-    const sortOrder = sessionStorage.getItem('contactSortOrder');
-    const isSearchActive = sessionStorage.getItem('searchActive');
-
-    // 5.11 Build the query string with the existing search and sort state
-
-    if (isSearchActive && search) {
-      searchParams.append('search', search);
-    }
-    if (sortBy) {
-      searchParams.append('sortBy', sortBy);
-    }
-    if (sortOrder) {
-      searchParams.append('sortOrder', sortOrder);
-    }
-
-    // 5.12 Navigate with preserved search and sort state
-    const queryString = searchParams.toString();
-    navigate(`/${queryString ? `?${queryString}` : ''}`, { replace: true });
-  };
-
   // !! Form Handling dan Validasi
   // 5.4 Fungsi untuk menangani submit formulir
   const handleSubmit = async (e) => {
     e.preventDefault(); // Mencegah perilaku default form submit
-    setError(''); // Mengosongkan pesan error
+    setError(""); // Mengosongkan pesan error
     setIsSubmitting(true); // Menandai bahwa proses submit dimulai
 
     // 5.5 Validasi input
     if (!form.name.trim() || !form.phone.trim()) {
-      setError('Name and phone number are required');
+      setError("Name and phone number are required");
       setIsSubmitting(false);
       return;
     }
@@ -58,10 +31,10 @@ const AddContact = ({ onAdd }) => {
     try {
       // 5.6 Mencoba menambahkan kontak baru
       await onAdd(form);
-      navigate('/'); // Navigasi ke halaman utama jika berhasil
+      navigate("/"); // Navigasi ke halaman utama jika berhasil
     } catch (error) {
       // 5.7 Menangani error jika gagal menambahkan kontak
-      setError(error.message || 'Error adding contact');
+      setError(error.message || "Error adding contact");
     } finally {
       // 5.8 Mengatur isSubmitting kembali ke false setelah proses selesai
       setIsSubmitting(false);
@@ -72,13 +45,40 @@ const AddContact = ({ onAdd }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     // Memperbarui state form dengan nilai input terbaru
-    setForm(prev => ({ ...prev, [name]: value }));
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // !! Navigation Handling
+  // Fungsi untuk menangani kembali ke halaman utama
+  const handleCancel = () => {
+    // 5.10 Preserve the existing search and sort state when navigating back
+    const searchParams = new URLSearchParams();
+    const search = sessionStorage.getItem("contactSearch");
+    const sortBy = sessionStorage.getItem("contactSortBy");
+    const sortOrder = sessionStorage.getItem("contactSortOrder");
+    const isSearchActive = sessionStorage.getItem("searchActive");
+
+    // 5.11 Build the query string with the existing search and sort state
+
+    if (isSearchActive && search) {
+      searchParams.append("search", search);
+    }
+    if (sortBy) {
+      searchParams.append("sortBy", sortBy);
+    }
+    if (sortOrder) {
+      searchParams.append("sortOrder", sortOrder);
+    }
+
+    // 5.12 Navigate with preserved search and sort state
+    const queryString = searchParams.toString();
+    navigate(`/${queryString ? `?${queryString}` : ""}`, { replace: true });
   };
 
   // Render komponen
   return (
     <div className="add-view">
-      <h2>Adding View</h2>
+      <h2>Add Contact</h2>
       {/* Menampilkan pesan error jika ada */}
       {error && <p className="error-message">{error}</p>}
       <form onSubmit={handleSubmit} className="add-form">
@@ -105,13 +105,13 @@ const AddContact = ({ onAdd }) => {
         <div className="add-form-actions">
           {/* Tombol submit */}
           <button type="submit" className="save-button" disabled={isSubmitting}>
-            {isSubmitting ? 'Saving...' : 'save'}
+            {isSubmitting ? "Saving..." : "save"}
           </button>
           {/* Tombol batal */}
-          <button 
-            type="button" 
-            className="cancel-button" 
-            onClick={handleCancel} 
+          <button
+            type="button"
+            className="cancel-button"
+            onClick={handleCancel}
             disabled={isSubmitting}
           >
             cancel

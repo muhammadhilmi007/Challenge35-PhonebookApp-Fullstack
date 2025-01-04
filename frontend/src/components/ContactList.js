@@ -1,8 +1,15 @@
 // Komponen ContactList: Menampilkan daftar kontak dengan fitur infinite scrolling
-import React, { useEffect, useRef } from 'react';
-import ContactCard from './ContactCard';
+import React, { useEffect, useRef } from "react";
+import ContactCard from "./ContactCard";
 
-const ContactList = ({ contacts, onEdit, onDelete, onAvatarUpdate, onLoadMore, hasMore }) => {
+const ContactList = ({
+  contacts,
+  onEdit,
+  onDelete,
+  onAvatarUpdate,
+  onLoadMore,
+  hasMore,
+}) => {
   const lastContactRef = useRef();
 
   // 1.5 Setup Intersection Observer
@@ -15,7 +22,7 @@ const ContactList = ({ contacts, onEdit, onDelete, onAvatarUpdate, onLoadMore, h
           onLoadMore();
         }
       },
-      { threshold: 0.5 }
+      { threshold: 1 }
     );
 
     // 1.8 Observe Last Contact
@@ -25,12 +32,12 @@ const ContactList = ({ contacts, onEdit, onDelete, onAvatarUpdate, onLoadMore, h
 
     // 1.9 Cleanup
     return () => observer.disconnect();
-  }, [hasMore, onLoadMore]);
+  }, [lastContactRef, hasMore, onLoadMore]);
 
   if (!contacts.length) {
     return (
       <div className="contact-list-empty">
-        <p>No contacts available</p>
+        <p>No Contacts Available</p>
       </div>
     );
   }
@@ -38,20 +45,31 @@ const ContactList = ({ contacts, onEdit, onDelete, onAvatarUpdate, onLoadMore, h
   // 1.10/3.12 Render Contact List
   return (
     <div className="contact-list">
-      {contacts.map((contact, index) => (
-        <div 
-          key={contact.id} 
-          ref={index === contacts.length - 1 ? lastContactRef : null}
-        >
-          <ContactCard
-            contact={contact}
-            onEdit={onEdit}
-            onDelete={onDelete}
-            onAvatarUpdate={onAvatarUpdate}
-          />
-        </div>
-      ))}
-      {hasMore && <div ref={lastContactRef} className="loading-trigger">Loading more...</div>}
+      {contacts.map((contact, index) => {
+        if (contacts.length === index + 1) {
+          return (
+            <div key={contact.id} ref={lastContactRef}>
+              <ContactCard
+                contact={contact}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onAvatarUpdate={onAvatarUpdate}
+              />
+            </div>
+          );
+        } else {
+          return (
+            <div key={contact.id}>
+              <ContactCard
+                contact={contact}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onAvatarUpdate={onAvatarUpdate}
+              />
+            </div>
+          );
+        }
+      })}
     </div>
   );
 };
