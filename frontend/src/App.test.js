@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import App from './App';
 
 // Mock react-router-dom
@@ -8,7 +9,14 @@ jest.mock('react-router-dom', () => ({
   BrowserRouter: ({ children }) => <div>{children}</div>,
   Routes: ({ children }) => <div>{children}</div>,
   Route: ({ element }) => element,
-  useNavigate: () => jest.fn()
+  useNavigate: () => jest.fn(),
+  useLocation: () => ({
+    pathname: '/',
+    search: '',
+    hash: '',
+    state: null,
+    key: 'default'
+  })
 }));
 
 // Mock react-icons
@@ -60,7 +68,7 @@ const mockUseContactsImplementation = {
 // Mock useContacts hook
 jest.mock('./hooks/useContacts', () => ({
   __esModule: true,
-  useContacts: jest.fn(() => mockUseContactsImplementation)
+  default: jest.fn(() => mockUseContactsImplementation)
 }));
 
 describe('App', () => {
@@ -68,7 +76,7 @@ describe('App', () => {
     // Clear all mocks before each test
     jest.clearAllMocks();
     // Reset mock implementation
-    const { useContacts } = require('./hooks/useContacts');
+    const { default: useContacts } = require('./hooks/useContacts');
     useContacts.mockImplementation(() => ({
       ...mockUseContactsImplementation,
       contacts: []
@@ -76,7 +84,11 @@ describe('App', () => {
   });
 
   it('renders the phonebook app', async () => {
-    render(<App />);
+    render(
+      <MemoryRouter>
+        <App />
+      </MemoryRouter>
+    );
 
     // Check for the main components
     expect(screen.getByPlaceholderText(/search contacts/i)).toBeInTheDocument();
@@ -94,13 +106,17 @@ describe('App', () => {
     };
 
     // Set up mock contacts
-    const { useContacts } = require('./hooks/useContacts');
+    const { default: useContacts } = require('./hooks/useContacts');
     useContacts.mockImplementation(() => ({
       ...mockUseContactsImplementation,
       contacts: [mockContact]
     }));
 
-    render(<App />);
+    render(
+      <MemoryRouter>
+        <App />
+      </MemoryRouter>
+    );
 
     // Check for contact details
     const nameElement = await screen.findByRole('heading', { name: /john doe/i });

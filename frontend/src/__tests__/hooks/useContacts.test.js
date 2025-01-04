@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react';
-import { useContacts } from '../../App';
+import useContacts from '../../hooks/useContacts';
 import { api } from '../../services/api';
 
 // Mock the API

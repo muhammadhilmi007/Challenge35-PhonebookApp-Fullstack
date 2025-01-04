@@ -32,6 +32,19 @@ describe('ContactList', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    // Mock IntersectionObserver
+    const mockIntersectionObserver = jest.fn();
+    mockIntersectionObserver.mockReturnValue({
+      observe: jest.fn(),
+      unobserve: jest.fn(),
+      disconnect: jest.fn()
+    });
+    window.IntersectionObserver = mockIntersectionObserver;
+  });
+
+  afterEach(() => {
+    // Cleanup IntersectionObserver mock
+    delete window.IntersectionObserver;
   });
 
   it('renders contact list correctly', () => {
@@ -66,7 +79,7 @@ describe('ContactList', () => {
       />
     );
 
-    expect(screen.getByText('No contacts available')).toBeInTheDocument();
+    expect(screen.getByText('No Contacts Available')).toBeInTheDocument();
   });
 
   it('calls onEdit when edit button is clicked', async () => {
@@ -127,14 +140,6 @@ describe('ContactList', () => {
   });
 
   it('calls onLoadMore when scrolling to bottom', () => {
-    const mockIntersectionObserver = jest.fn();
-    mockIntersectionObserver.mockReturnValue({
-      observe: () => null,
-      unobserve: () => null,
-      disconnect: () => null
-    });
-    window.IntersectionObserver = mockIntersectionObserver;
-
     render(
       <ContactList
         contacts={mockContacts}
@@ -147,7 +152,7 @@ describe('ContactList', () => {
     );
 
     // Trigger intersection observer callback
-    const [observerCallback] = mockIntersectionObserver.mock.calls[0];
+    const observerCallback = window.IntersectionObserver.mock.calls[0][0];
     observerCallback([{ isIntersecting: true }]);
 
     expect(mockOnLoadMore).toHaveBeenCalled();
