@@ -1,7 +1,7 @@
 import axios, { AxiosError } from 'axios';
 import { Contact, ContactData, ContactsResponse } from '../types';
 
-const API_URL = 'http://192.168.1.11:3001/api';
+const API_URL = 'http://192.168.1.28:3001/api';
 
 interface PhotoData {
   uri: string;
@@ -110,4 +110,23 @@ export const deleteContact = async (id: number): Promise<boolean> => {
       throw new Error('Error setting up the request');
     }
   }
+};
+
+export const uploadAvatar = async (id: number, avatar: string): Promise<void> => {
+  const formData = new FormData();
+  const filename = avatar.split('/').pop() || 'photo.jpg';
+  const match = /\.(\w+)$/.exec(filename);
+  const type = match ? `image/${match[1]}` : 'image/jpeg';
+  
+  formData.append('photo', {
+    uri: avatar,
+    name: filename,
+    type,
+  } as unknown as Blob);
+
+  await axios.put(`${API_URL}/phonebooks/${id}/avatar`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
 };

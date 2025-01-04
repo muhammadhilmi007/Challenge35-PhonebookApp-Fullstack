@@ -13,7 +13,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faEdit, faTrash, faCheck, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { Ionicons } from '@expo/vector-icons';
 
-const API_URL = 'http://192.168.1.11:3001';
+const API_URL = 'http://192.168.1.28:3001';
 const DEFAULT_AVATAR = require('../../assets/default-avatar.png');
 
 interface Contact {

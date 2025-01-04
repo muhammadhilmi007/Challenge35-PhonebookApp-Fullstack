@@ -18,7 +18,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '@types';
 
-const API_URL = 'http://192.168.1.11:3001';
+const API_URL = 'http://192.168.1.28:3001';
 const DEFAULT_AVATAR = require('../../assets/default-avatar.png');
 
 type AvatarScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Avatar'>;

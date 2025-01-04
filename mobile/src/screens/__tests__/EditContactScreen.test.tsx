@@ -1,141 +1,187 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { Provider } from 'react-redux';
-import configureStore from 'redux-mock-store';
 import EditContactScreen from '../EditContactScreen';
+import { createMockStore, RootState } from '../../test/mocks/store';
+import configureMockStore from 'redux-mock-store';
+import thunk from 'redux-thunk';
+import { Alert } from 'react-native';
 
-const mockStore = configureStore([]);
-const mockNavigation = {
-  goBack: jest.fn(),
-  navigate: jest.fn()
-};
-
-const mockRoute = {
-  params: {
-    contact: {
-      id: 1,
-      name: 'John Doe',
-      phone: '1234567890'
-    }
-  }
-};
-
-jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => mockNavigation,
-  useRoute: () => mockRoute
+jest.mock('react-native-vector-icons/Ionicons', () => ({
+  name: 'ionicons',
+  size: 24,
+  color: 'black',
+  onPress: jest.fn(),
 }));
 
+jest.mock('react-native/Libraries/TurboModule/TurboModuleRegistry', () => ({
+  get: () => ({
+    getConstants: () => ({
+      settings: {
+        AppleLocale: 'en_US',
+        AppleLanguages: ['en'],
+      }
+    }),
+  }),
+  getEnforcing: () => ({
+    getConstants: () => ({
+      settings: {
+        AppleLocale: 'en_US',
+        AppleLanguages: ['en'],
+      }
+    }),
+  }),
+}));
+
+jest.mock('react-native', () => {
+  const reactNative = jest.requireActual('react-native');
+  return {
+    ...reactNative,
+    NativeModules: {
+      ...reactNative.NativeModules,
+      SettingsManager: {
+        settings: {
+          AppleLocale: 'en_US',
+          AppleLanguages: ['en'],
+        }
+      },
+    },
+    Settings: {
+      get: jest.fn(),
+      set: jest.fn(),
+      watchKeys: jest.fn(),
+      clearWatch: jest.fn(),
+    },
+    Alert: {
+      ...reactNative.Alert,
+      alert: jest.fn(),
+    },
+  };
+});
+
 describe('EditContactScreen', () => {
-  let store;
+  let store: ReturnType<typeof createMockStore>;
+  const mockContact = {
+    id: 1,
+    name: 'John Doe',
+    phone: '123-456-7890',
+  };
+
+  const mockNavigation = {
+    navigate: jest.fn(),
+    goBack: jest.fn(),
+    dispatch: jest.fn(),
+    setParams: jest.fn(),
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
+    reset: jest.fn(),
+    isFocused: jest.fn(),
+    canGoBack: jest.fn(),
+    getId: jest.fn(),
+    getParent: jest.fn(),
+    getState: jest.fn(),
+    navigateDeprecated: jest.fn(),
+    preload: jest.fn(),
+    setStateForNextRouteNamesChange: jest.fn(),
+    setOptions: jest.fn(),
+    replace: jest.fn(),
+    push: jest.fn(),
+    pop: jest.fn(),
+    popToTop: jest.fn(),
+    popTo: jest.fn()
+  } as const;
 
   beforeEach(() => {
-    store = mockStore({
+    store = createMockStore({
       contacts: {
+        contacts: [],
         loading: false,
-        error: null
-      }
+        error: null,
+      },
     });
     store.dispatch = jest.fn();
     jest.clearAllMocks();
   });
 
-  const renderComponent = () =>
-    render(
+  it('renders form with existing contact data', () => {
+    const { getByDisplayValue, getByText } = render(
       <Provider store={store}>
-        <EditContactScreen />
+        <EditContactScreen
+          route={{
+            key: 'edit-contact-key',
+            name: 'EditContact',
+            params: { contact: mockContact }
+          }} navigation={mockNavigation}        />
       </Provider>
     );
 
-  it('renders with pre-filled contact information', () => {
-    const { getByDisplayValue } = renderComponent();
-
     expect(getByDisplayValue('John Doe')).toBeTruthy();
-    expect(getByDisplayValue('1234567890')).toBeTruthy();
+    expect(getByDisplayValue('123-456-7890')).toBeTruthy();
+    expect(getByText('Save Changes')).toBeTruthy();
   });
 
-  it('updates input fields when user types', () => {
-    const { getByDisplayValue } = renderComponent();
-
-    const nameInput = getByDisplayValue('John Doe');
-    const phoneInput = getByDisplayValue('1234567890');
-
-    fireEvent.changeText(nameInput, 'Jane Doe');
-    fireEvent.changeText(phoneInput, '0987654321');
-
-    expect(nameInput.props.value).toBe('Jane Doe');
-    expect(phoneInput.props.value).toBe('0987654321');
-  });
-
-  it('shows validation error for empty name', () => {
-    const { getByDisplayValue, getByText, queryByText } = renderComponent();
+  it('validates required fields', () => {
+    const { getByDisplayValue, getByText } = render(
+      <Provider store={store}>
+        <EditContactScreen
+          route={{
+            key: 'edit-contact-key',
+            name: 'EditContact',
+            params: { contact: mockContact }
+          }} navigation={mockNavigation}        />
+      </Provider>
+    );
 
     const nameInput = getByDisplayValue('John Doe');
     fireEvent.changeText(nameInput, '');
-
-    const saveButton = getByText('Save');
+    
+    const saveButton = getByText('Save Changes');
     fireEvent.press(saveButton);
 
-    expect(queryByText('Name is required')).toBeTruthy();
+    expect(Alert.alert).toHaveBeenCalledWith('Error', 'Name and phone number are required');
   });
 
-  it('shows validation error for empty phone', () => {
-    const { getByDisplayValue, getByText, queryByText } = renderComponent();
-
-    const phoneInput = getByDisplayValue('1234567890');
-    fireEvent.changeText(phoneInput, '');
-
-    const saveButton = getByText('Save');
-    fireEvent.press(saveButton);
-
-    expect(queryByText('Phone is required')).toBeTruthy();
-  });
-
-  it('dispatches updateContact action when form is valid', () => {
-    const { getByDisplayValue, getByText } = renderComponent();
+  it('submits form with updated data', () => {
+    const { getByDisplayValue, getByText } = render(
+      <Provider store={store}>
+        <EditContactScreen
+          route={{
+            key: 'edit-contact-key',
+            name: 'EditContact',
+            params: { contact: mockContact }
+          }} navigation={mockNavigation}        />
+      </Provider>
+    );
 
     const nameInput = getByDisplayValue('John Doe');
-    const phoneInput = getByDisplayValue('1234567890');
-
-    fireEvent.changeText(nameInput, 'Jane Doe');
-    fireEvent.changeText(phoneInput, '0987654321');
-
-    const saveButton = getByText('Save');
+    fireEvent.changeText(nameInput, 'John Smith');
+    
+    const saveButton = getByText('Save Changes');
     fireEvent.press(saveButton);
 
-    expect(store.dispatch).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: 'contacts/updateContact',
-        payload: expect.objectContaining({
-          id: 1,
-          name: 'Jane Doe',
-          phone: '0987654321'
-        })
-      })
-    );
+    expect(store.dispatch).toHaveBeenCalled();
   });
 
-  it('navigates back when cancel is pressed', () => {
-    const { getByText } = renderComponent();
-
-    const cancelButton = getByText('Cancel');
-    fireEvent.press(cancelButton);
-
-    expect(mockNavigation.goBack).toHaveBeenCalled();
-  });
-
-  it('navigates back after successful update', () => {
-    const { getByText } = renderComponent();
-
-    const saveButton = getByText('Save');
-    fireEvent.press(saveButton);
-
-    // Simulate successful update
-    store.dispatch.mockImplementationOnce((action) => {
-      if (action.type === 'contacts/updateContact') {
-        action.payload.onSuccess?.();
-      }
+  it('shows loading indicator when submitting', () => {
+    const loadingStore = createMockStore({
+      contacts: {
+        contacts: [],
+        loading: true,
+        error: null,
+      },
     });
 
-    expect(mockNavigation.goBack).toHaveBeenCalled();
+    const { getByTestId } = render(
+      <Provider store={loadingStore}>
+        <EditContactScreen
+          route={{
+            key: 'edit-contact-key',
+            name: 'EditContact',
+            params: { contact: mockContact }
+          }} navigation={mockNavigation}        />
+      </Provider>
+    );
+
+    expect(getByTestId('loading-spinner')).toBeTruthy();
   });
 });

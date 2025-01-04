@@ -1,10 +1,11 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, fireEvent, act } from '@testing-library/react-native';
 import { Provider } from 'react-redux';
 import configureStore from 'redux-mock-store';
+import thunk from 'redux-thunk';
 import HomeScreen from '../HomeScreen';
 
-const mockStore = configureStore([]);
+const mockStore = configureStore([thunk]);
 
 describe('HomeScreen', () => {
   let store;
@@ -12,62 +13,77 @@ describe('HomeScreen', () => {
   beforeEach(() => {
     store = mockStore({
       contacts: {
-        contacts: [],
+        contacts: [
+          {
+            id: 1,
+            name: 'John Doe',
+            phone: '123-456-7890',
+          },
+          {
+            id: 2,
+            name: 'Jane Smith',
+            phone: '098-765-4321',
+          },
+        ],
         loading: false,
         error: null,
-        hasMore: true,
-        page: 1
-      }
+      },
     });
   });
 
   it('renders correctly', () => {
-    const { getByTestId } = render(
+    const { getByTestId, getByText } = render(
       <Provider store={store}>
         <HomeScreen />
       </Provider>
     );
 
-    expect(getByTestId('home-screen')).toBeTruthy();
+    expect(getByTestId('search-bar')).toBeTruthy();
+    expect(getByText('John Doe')).toBeTruthy();
+    expect(getByText('Jane Smith')).toBeTruthy();
   });
 
-  it('handles search input correctly', () => {
-    const { getByPlaceholderText } = render(
+  it('filters contacts when searching', () => {
+    const { getByTestId, getByText, queryByText } = render(
       <Provider store={store}>
         <HomeScreen />
       </Provider>
     );
 
-    const searchInput = getByPlaceholderText('Search contacts...');
+    const searchInput = getByTestId('search-input');
     fireEvent.changeText(searchInput, 'John');
-    
-    // Verify that the search action was dispatched
-    const actions = store.getActions();
-    expect(actions).toContainEqual(expect.objectContaining({
-      type: 'contacts/searchContacts'
-    }));
+
+    expect(getByText('John Doe')).toBeTruthy();
+    expect(queryByText('Jane Smith')).toBeNull();
   });
 
-  it('loads more contacts when scrolling to bottom', () => {
+  it('navigates to add contact screen when FAB is pressed', () => {
+    const mockNavigate = jest.fn();
     const { getByTestId } = render(
       <Provider store={store}>
-        <HomeScreen />
+        <HomeScreen navigation={{ navigate: mockNavigate }} />
       </Provider>
     );
 
-    const flatList = getByTestId('contacts-list');
-    fireEvent.scroll(flatList, {
-      nativeEvent: {
-        contentOffset: { y: 500 },
-        contentSize: { height: 500, width: 100 },
-        layoutMeasurement: { height: 100, width: 100 }
-      }
+    fireEvent.press(getByTestId('add-contact-fab'));
+    expect(mockNavigate).toHaveBeenCalledWith('AddContact');
+  });
+
+  it('shows loading indicator when loading contacts', () => {
+    const loadingStore = mockStore({
+      contacts: {
+        contacts: [],
+        loading: true,
+        error: null,
+      },
     });
 
-    // Verify that the load more action was dispatched
-    const actions = store.getActions();
-    expect(actions).toContainEqual(expect.objectContaining({
-      type: 'contacts/loadMoreContacts'
-    }));
+    const { getByTestId } = render(
+      <Provider store={loadingStore}>
+        <HomeScreen />
+      </Provider>
+    );
+
+    expect(getByTestId('loading-spinner')).toBeTruthy();
   });
 });
