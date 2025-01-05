@@ -82,7 +82,7 @@ const MainPage = () => {
     navigate(`/avatar/${id}`);
   };
 
-  const handleAdd = () => {
+  const handleAddClick = () => {
     navigate("/add");
   };
 
@@ -106,7 +106,7 @@ const MainPage = () => {
         value={search}
         onChange={handleSearch}
         onSort={handleSort}
-        onAdd={handleAdd}
+        onAdd={handleAddClick}
       />
       <ContactList
         contacts={contacts}

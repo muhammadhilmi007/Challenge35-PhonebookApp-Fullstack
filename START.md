@@ -90,812 +90,342 @@ Untuk meneruskan request API ke backend server, tambahkan konfigurasi proxy di f
 
 # 2. Proses Menampilkan Halaman Main Page setelah npm start
 
-Berikut adalah tahapan lengkap proses menampilkan halaman utama setelah menjalankan `npm start`:
+Berikut adalah penjelasan detail tentang proses yang terjadi saat menampilkan halaman Main Page setelah menjalankan perintah `npm start`:
 
-1. **Inisialisasi Aplikasi (`frontend/src/index.js`)**
+## 2.1. Inisialisasi Aplikasi React (index.js)
 
+1. **Entry Point Initialization**
    ```javascript
-   import React from "react";
-   import ReactDOM from "react-dom/client";
-   import App from "./App";
-   import { BrowserRouter } from "react-router-dom";
+   import React from 'react';
+   import ReactDOM from 'react-dom/client';
+   import App from './App';
+   ```
+   - React dan ReactDOM diimpor sebagai dependencies utama
+   - Komponen App diimpor sebagai root component
 
-   const root = ReactDOM.createRoot(document.getElementById("root"));
+2. **Root Rendering**
+   ```javascript
+   const root = ReactDOM.createRoot(document.getElementById('root'));
    root.render(
-     <BrowserRouter>
+     <React.StrictMode>
        <App />
-     </BrowserRouter>
+     </React.StrictMode>
    );
    ```
+   - ReactDOM mencari elemen dengan id 'root' di index.html
+   - Membuat root instance untuk React 18 dengan createRoot
+   - Merender App component dalam StrictMode untuk development yang lebih aman
 
-   - Aplikasi dimulai dari `index.js`
-   - Menggunakan `BrowserRouter` untuk manajemen routing
-   - Me-render komponen `App` sebagai root aplikasi
+## 2.2. Routing dan Context Setup (App.js)
 
-2. **Routing di App Component (`frontend/src/App.js`)**
-
+1. **Router dan Provider Setup**
    ```javascript
-   import { Routes, Route } from "react-router-dom";
-   import MainPage from "./components/MainPage";
+   import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+   import { ContactProvider } from "./hooks/useContacts";
+   ```
+   - Router diimpor untuk handling navigasi
+   - ContactProvider diimpor untuk state management
 
-   function App() {
-     return (
+2. **Route Configuration**
+   ```javascript
+   <Router>
+     <ContactProvider>
        <Routes>
          <Route path="/" element={<MainPage />} />
-         {/* routes lainnya */}
        </Routes>
-     );
-   }
+     </ContactProvider>
+   </Router>
    ```
+   - Router mengatur navigasi aplikasi
+   - ContactProvider menyediakan context untuk manajemen state kontak
+   - Route "/" dikonfigurasi untuk menampilkan MainPage
 
-   - Mendefinisikan rute untuk aplikasi
-   - Rute "/" akan menampilkan komponen `MainPage`
+## 2.3. Main Page Component Initialization (MainPage.js)
 
-3. **Inisialisasi MainPage (`frontend/src/components/MainPage.js`)**
-
+1. **Component Setup dan Hooks**
    ```javascript
    const MainPage = () => {
      const navigate = useNavigate();
      const location = useLocation();
-
      const {
-       contacts,
-       loading,
-       error,
-       hasMore,
-       search,
-       setSearch,
-       setSortBy,
-       setSortOrder,
-       loadMore,
-       refreshContacts,
+       state: { contacts, loading, error },
+       handleSearch,
+       loadContacts,
      } = useContacts();
    ```
+   - useNavigate untuk navigasi programmatik
+   - useLocation untuk akses URL parameters
+   - useContacts untuk akses state dan methods terkait kontak
 
-   - Menggunakan hooks untuk navigasi dan lokasi
-   - Mengambil state dan fungsi dari custom hook `useContacts`
-
-4. **Manajemen State dengan useContacts (`frontend/src/hooks/useContacts.js`)**
-
+2. **Initial Data Loading**
    ```javascript
-   const useContacts = () => {
-     const [contacts, setContacts] = useState([]);
-     const [loading, setLoading] = useState(false);
-     const [error, setError] = useState(null);
-     const [page, setPage] = useState(1);
-     const [hasMore, setHasMore] = useState(true);
-
-     // State untuk pengurutan dan pencarian
-     const [sortBy, setSortBy] = useState(() =>
-       sessionStorage.getItem("contactSortBy") || "name"
-     );
-     const [search, setSearch] = useState(() => {
-       const savedSearch = sessionStorage.getItem("contactSearch");
-       return sessionStorage.getItem("searchActive") === "true" ? savedSearch : "";
-     });
+   useEffect(() => {
+     loadContacts();
+   }, []);
    ```
+   - useEffect dijalankan saat komponen mount
+   - loadContacts dipanggil untuk mengambil data kontak dari API
 
-   - Menginisialisasi state untuk kontak, loading, dan error
-   - Mengambil preferensi pengurutan dan pencarian dari sessionStorage
+## 2.4. Sequence Flow
 
-5. **Proses Loading Data**
+1. User menjalankan `npm start`
+2. Development server dimulai (default: localhost:3000)
+3. index.js dieksekusi, merender App component
+4. App.js menginisialisasi router dan context providers
+5. Router mendeteksi URL "/" dan merender MainPage
+6. MainPage component diinisialisasi:
+   - Hooks disetup (navigate, location, contacts)
+   - Initial data loading dijalankan
+   - UI dirender berdasarkan state yang ada
 
+Proses ini terjadi secara cepat dan teroptimasi berkat Virtual DOM React yang hanya merender ulang komponen yang berubah.
+
+# 3. Proses Menampilkan Halaman Add Contact dari mulai user mengklik button "Add Contact" pada halaman utama dan kemudian mengklik tombol "Save" pada halaman Add Contact
+Berikut adalah penjelasan detail proses penambahan kontak baru dari awal hingga akhir:
+
+## 3.1. Proses di Halaman Utama (`frontend/src/components/MainPage.js`)
+
+1. **Persiapan Navigasi**
    ```javascript
-   const loadContacts = useCallback(
-     async (loadMore = false) => {
-       if (loading) return;
-       setLoading(true);
-
-       try {
-         const { phonebooks, ...pagination } = await api.getContacts(
-           loadMore ? page + 1 : 1,
-           10,
-           sortBy,
-           sortOrder,
-           search
-         );
-
-         if (Array.isArray(phonebooks)) {
-           setContacts((prev) =>
-             loadMore ? [...prev, ...phonebooks] : phonebooks
-           );
-           setHasMore(currentPage < pagination.pages);
-           setPage(currentPage);
-         }
-       } catch (error) {
-         setError(error);
-       } finally {
-         setLoading(false);
-       }
-     },
-     [loading, page, sortBy, sortOrder, search]
-   );
+   import { useNavigate } from "react-router-dom";
+   
+   const MainPage = () => {
+     const navigate = useNavigate();
+     // ...
+   }
    ```
+   - Mengimpor hook `useNavigate` dari react-router-dom untuk keperluan navigasi
+   - Hook ini berfungsi untuk berpindah antar halaman dalam aplikasi
 
-   - Mengambil data kontak dari API
-   - Menangani pagination dan infinite scroll
-   - Memperbarui state sesuai response
-
-6. **Render Komponen UI**
-
+2. **Penanganan Tombol Add Contact**
    ```javascript
-   return (
-     <div className="app">
-       <SearchBar
-         value={search}
-         onSearch={handleSearch}
-         onAdd={handleAdd}
-         onSort={handleSort}
-       />
-       <ContactList
-         contacts={contacts}
-         loading={loading}
-         error={error}
-         hasMore={hasMore}
-         onLoadMore={loadMore}
-         onEdit={handleEdit}
-         onDelete={handleDelete}
-         onAvatarUpdate={handleAvatarUpdate}
-       />
-       {loading && <p>Loading...</p>}
-     </div>
-   );
+   const handleAddClick = () => {
+     navigate('/add');
+   };
    ```
+   - Ketika tombol "Add Contact" diklik, fungsi `navigate` akan dipanggil
+   - Fungsi ini akan mengarahkan pengguna ke halaman dengan rute '/add'
 
-   - Menampilkan SearchBar untuk pencarian dan pengurutan
-   - Menampilkan ContactList dengan data kontak
-   - Menampilkan indikator loading saat memuat data
+## 3.2. Proses di Komponen AddContact (`frontend/src/components/AddContact.js`)
 
-7. **Alur Proses Lengkap**
+1. **Inisialisasi State**
+   ```javascript
+   const AddContact = ({ onAdd }) => {
+     // State untuk data formulir
+     const [form, setForm] = useState({ name: '', phone: '' });
+     // State untuk pesan kesalahan
+     const [error, setError] = useState('');
+     // State untuk status pengiriman
+     const [isSubmitting, setIsSubmitting] = useState(false);
+     const navigate = useNavigate();
+   }
+   ```
+   - Membuat state `form` untuk menyimpan data nama dan nomor telepon
+   - Membuat state `error` untuk menampung pesan kesalahan
+   - Membuat state `isSubmitting` untuk menandai proses penyimpanan
+   - Menyiapkan fungsi navigasi untuk kembali ke halaman utama
 
-   - Saat aplikasi dimulai:
-
-     1. `index.js` me-render `App` component
-     2. `App` merutekan ke `MainPage` untuk path "/"
-     3. `MainPage` diinisialisasi dan memanggil `useContacts`
-     4. `useContacts` memuat data awal dari API
-     5. UI dirender dengan data yang diterima
-
-   - Fitur yang tersedia:
-
-     1. Pencarian kontak secara real-time
-     2. Pengurutan berdasarkan nama atau nomor
-     3. Infinite scroll untuk memuat lebih banyak kontak
-     4. Edit dan hapus kontak
-     5. Update avatar kontak
-
-   - State Management:
-
-     1. State lokal untuk UI components
-     2. Custom hook untuk logika bisnis
-     3. SessionStorage untuk persistensi preferensi user
-
-   - Komunikasi dengan backend melalui API calls:
-
-     1. `api.getContacts` untuk memuat data kontak
-     2. `api.editContact` untuk menyimpan perubahan kontak
-     3. `api.deleteContact` untuk menghapus kontak
-
-   - Error handling:
-
-     1. Menangani kesalahan saat memuat data
-     2. Menangani kesalahan saat menyimpan perubahan kontak
-     3. Menangani kesalahan saat menghapus kontak
-
-   - Routing:
-
-     1. Menggunakan React Router untuk navigasi antar halaman
-
-   - Optimasi Performa:
-
-     1. Implementasi infinite scroll untuk memuat kontak secara bertahap
-     2. Pencarian dan pengurutan dilakukan secara lokal untuk UX yang lebih responsif
-
-   - Alur Aplikasi:
-
-     1. Aplikasi dimulai dengan merender komponen App
-     2. Pengguna diarahkan ke halaman utama (MainPage) yang menampilkan daftar kontak
-     3. Pengguna dapat melakukan pencarian, pengurutan, atau scroll untuk memuat lebih banyak kontak
-     4. Untuk menambah kontak baru, pengguna diarahkan ke halaman AddContact
-     5. Untuk mengedit atau menghapus kontak, pengguna dapat melakukannya langsung dari daftar kontak
-     6. Untuk memperbarui avatar, pengguna diarahkan ke halaman AvatarUpload
-
-   - Komponen UI:
-
-     1. SearchBar: Input pencarian dan tombol pencarian
-     2. ContactList: Daftar kontak yang dapat di-edit, dihapus, dan memperbarui avatar kontak
-     3. ContactCard: Card kontak yang dapat di-edit, dihapus, dan memperbarui avatar kontak
-     4. AvatarUpload: Form untuk memperbarui avatar kontak
-
-   - Manajemen State:
-
-     1. State lokal di-sync dengan data dari backend melalui API calls
-     2. Perubahan pada frontend (seperti edit atau hapus) langsung dikirim ke backend
-
-   - Alur Proses Keseluruhan:
-
-     1. Pencarian:
-     1. User mengetik keyword di search field
-     1. `handleSearchChange` dipanggil setiap perubahan input
-     1. State pencarian diperbarui di useContacts
-     1. Data diambil dari API dengan parameter pencarian
-     1. Hasil ditampilkan di daftar kontak
-
-     1. Pengurutan:
-     1. User memilih opsi pengurutan
-     1. `handleSortChange` dipanggil setiap perubahan input
-     1. State pengurutan diperbarui di useContacts
-     1. Data diambil dari API dengan parameter pengurutan
-     1. Hasil ditampilkan di daftar kontak
-
-     1. Infinite Scroll:
-     1. User melakukan scroll ke bawah
-     1. `handleScroll` dipanggil saat user melakukan scroll
-     1. `loadMore` dipanggil untuk memuat kontak berikutnya
-     1. Data diambil dari API dengan parameter halaman
-     1. Hasil ditampilkan di daftar kontak
-
-     1. Menambah Kontak:
-     1. User menekan tombol "Add Contact"
-     1. `handleAdd` dipanggil untuk navigasi ke halaman AddContact
-     1. Komponen AddContact ditampilkan
-     1. User mengisi form dan menekan tombol "Save"
-     1. `handleSubmit` dipanggil untuk menyimpan kontak baru
-     1. Data dikirim ke API untuk disimpan
-     1. Hasil ditampilkan di daftar kontak
-
-     1. Mengedit Kontak:
-     1. User menekan tombol "Edit" pada kontak
-     1. `handleEdit` dipanggil untuk navigasi ke halaman EditContact
-     1. Komponen EditContact ditampilkan
-     1. User mengisi form dan menekan tombol "Save"
-     1. `handleSubmit` dipanggil untuk menyimpan perubahan kontak
-     1. Data dikirim ke API untuk disimpan
-     1. Hasil ditampilkan di daftar kontak
-
-     1. Menghapus Kontak:
-     1. User menekan tombol "Delete" pada kontak
-     1. `handleDelete` dipanggil untuk menghapus kontak
-     1. Data dikirim ke API untuk dihapus
-     1. Hasil ditampilkan di daftar kontak
-
-     1. Memperbarui Avatar Kontak:
-     1. User menekan tombol "Update Avatar" pada kontak
-     1. `handleAvatarUpdate` dipanggil untuk navigasi ke halaman AvatarUpload
-     1. Komponen AvatarUpload ditampilkan
-     1. User mengisi form dan menekan tombol "Save"
-     1. `handleSubmit` dipanggil untuk menyimpan perubahan avatar kontak
-     1. Data dikirim ke API untuk disimpan
-     1. Hasil ditampilkan di daftar kontak
-
-     1. Error Handling:
-     1. Kesalahan saat memuat data
-     1. Kesalahan saat menyimpan perubahan kontak
-     1. Kesalahan saat menghapus kontak
-     1. Kesalahan saat memperbarui avatar kontak
-
-     1. Routing:
-     1. Pengguna diarahkan ke halaman utama
-     1. Pengguna diarahkan ke halaman AddContact
-     1. Pengguna diarahkan ke halaman EditContact
-     1. Pengguna diarahkan ke halaman AvatarUpload
-
-     1. Optimasi Performa:
-     1. Implementasi infinite scroll untuk memuat kontak secara bertahap
-     1. Pencarian dan pengurutan dilakukan secara lokal untuk UX yang lebih responsif
-
-     1. Penjelasan Fungsi:
-     1. `useContacts` untuk memuat data kontak
-     1. `handleSearchChange` untuk mengubah pencarian
-     1. `handleSortChange` untuk mengubah pengurutan
-     1. `handleScroll` untuk memuat kontak berikutnya
-     1. `handleAdd` untuk navigasi ke halaman AddContact
-     1. `handleEdit` untuk navigasi ke halaman EditContact
-     1. `handleDelete` untuk menghapus kontak
-     1. `handleAvatarUpdate` untuk navigasi ke halaman AvatarUpload
-
-     1. Penjelasan Komponen:
-     1. SearchBar: Input pencarian dan tombol pencarian
-     1. ContactList: Daftar kontak yang dapat di-edit, dihapus, dan memperbarui avatar kontak
-     1. ContactCard: Card kontak yang dapat di-edit, dihapus, dan memperbarui avatar kontak
-     1. AvatarUpload: Form untuk memperbarui avatar kontak
-
-     1. Penjelasan fungsi pada React JS:
-     1. useEffect: Menggunakan useEffect untuk memuat data kontak
-     1. useState: Menggunakan useState untuk mengelola state
-     1. useMemo: Menggunakan useMemo untuk menyimpan data kontak
-     1. useCallback: Menggunakan useCallback untuk menyimpan fungsi
-     1. useSessionStorage: Menggunakan useSessionStorage untuk menyimpan preferensi pengguna
-     1. useNavigate: Menggunakan useNavigate untuk navigasi antar halaman
-     1. useInfiniteScroll: Menggunakan useInfiniteScroll untuk memuat kontak secara bertahap
-     1. useSearch: Menggunakan useSearch untuk pencarian
-     1. useSort: Menggunakan useSort untuk pengurutan
-     1. useDebounce: Menggunakan useDebounce untuk debouncing pencarian
-     1. useScroll: Menggunakan useScroll untuk memuat kontak berikutnya
-     1. useAvatar: Menggunakan useAvatar untuk mengunggah avatar kontak
-
-# 3. Proses Menampilkan Halaman Add Contact dari mulai user mengklik button "Add Contact" pada halaman utama
-
-Proses menampilkan halaman Add Contact terjadi dalam beberapa tahap:
-
-1. **Komponen MainPage (`frontend/src/components/MainPage.js`)**
-
-   - Pada halaman utama, terdapat tombol "Add Contact" yang ketika diklik akan menggunakan fungsi `navigate` dari React Router
-   - Fungsi `navigate` akan mengarahkan pengguna ke halaman `/add`
-
-2. **Komponen AddContact (`frontend/src/components/AddContact.js`)**
-   - Ketika pengguna diarahkan ke `/add`, React Router akan merender komponen AddContact
-   - Komponen ini menginisialisasi state menggunakan useState:
-     - `form`: menyimpan data nama dan nomor telepon
-     - `error`: menyimpan pesan error jika ada
-     - `isSubmitting`: menandakan proses submit sedang berlangsung
-3. **Form Input**
-
-   - Form memiliki dua input field:
-     - Input untuk nama kontak
-     - Input untuk nomor telepon
-   - Setiap perubahan pada input field akan mengupdate state `form` melalui fungsi `handleChange`
-
-4. **Tombol Aksi**
-   - Terdapat dua tombol:
-     - "Save": untuk menyimpan kontak baru
-     - "Cancel": untuk membatalkan dan kembali ke halaman utama
-   - Saat tombol Cancel diklik, fungsi `handleCancel` akan dipanggil untuk kembali ke halaman utama
-   - Saat form disubmit, fungsi `handleSubmit` akan:
-     - Memvalidasi input (tidak boleh kosong)
-     - Mengirim data ke server melalui props `onAdd`
-     - Menampilkan error jika ada masalah
-     - Redirect ke halaman utama jika berhasil
-
-# 4. Proses Fitur Edit Contact dari mulai user mengklik button "Edit Contact" pada halaman utama
-
-Proses fitur Edit Contact terdiri dari beberapa tahapan:
-
-1. **Komponen ContactCard (`frontend/src/components/ContactCard.js`)**
-
-   - Setiap kontak ditampilkan dalam bentuk card yang memiliki tombol "Edit"
-   - Ketika tombol "Edit" diklik:
-     - State `isEditing` diubah menjadi `true`
-     - Form edit akan muncul dengan data kontak yang sudah ada
-     - Data awal disimpan dalam state `form` menggunakan `useState`
-
-2. **Proses Edit Data**
-
-   - Form edit memiliki dua input field:
-     - Input nama kontak (terisi dengan data sebelumnya)
-     - Input nomor telepon (terisi dengan data sebelumnya)
-   - Setiap perubahan pada input field akan mengupdate state `form` melalui fungsi `handleChange`
-   - Validasi input dilakukan saat user menyimpan perubahan:
-     - Nama dan nomor telepon tidak boleh kosong
-     - Jika kosong, akan menampilkan pesan error
+2. **Penanganan Input Formulir**
+   ```javascript
+   const handleChange = (e) => {
+     const { name, value } = e.target;
+     setForm(prev => ({
+       ...prev,
+       [name]: value
+     }));
+     setError('');
+   };
+   ```
+   - Fungsi ini dipanggil setiap kali pengguna mengetik di form
+   - Mengupdate state form sesuai dengan input pengguna
+   - Menghapus pesan error saat pengguna mulai mengetik
+   - `e.target` adalah element HTML yang sedang di-interaksi, seperti input field nama atau nomor telepon.
 
 3. **Proses Penyimpanan**
-
-   - Saat user mengklik tombol "Save":
-     - Fungsi `handleSave` dipanggil
-     - Data dikirim ke server melalui API menggunakan fungsi `onEdit`
-     - Jika berhasil:
-       - State `isEditing` diubah menjadi `false`
-       - Card kembali ke mode tampilan normal
-       - Data yang ditampilkan sudah terupdate
-     - Jika gagal:
-       - Error ditampilkan di console
-       - User tetap dalam mode edit
-
-4. **Pembatalan Edit**
-   - User dapat membatalkan proses edit dengan mengklik tombol "Cancel"
-   - Saat dibatalkan:
-     - State `isEditing` diubah menjadi `false`
-     - Form edit ditutup
-     - Data kembali ke kondisi sebelum diedit
-
-# 5. Proses Fitur Upload Avatar dari mulai user mengklik gambar avatar pada halaman utama
-
-Proses fitur Upload Avatar terdiri dari beberapa tahapan:
-
-1. **Inisiasi Upload Avatar (`frontend/src/components/ContactCard.js`)**
-
-   - User mengklik gambar avatar pada card kontak
-   - Fungsi `handleAvatarClick` dipanggil
-   - Navigasi ke halaman upload avatar dengan ID kontak tertentu
-
-2. **Komponen AvatarUpload (`frontend/src/components/AvatarUpload.js`)**
-
-   - Komponen ini menginisialisasi beberapa state:
-     - `preview`: untuk menampilkan preview gambar yang akan diupload
-     - `currentAvatar`: menyimpan avatar yang sedang digunakan
-     - `uploading`: status proses upload
-     - `error`: menyimpan pesan error jika ada
-   - Saat komponen dimuat:
-     - Mengambil ID kontak dari parameter URL
-     - Mengambil data avatar saat ini dari server
-
-3. **Proses Upload File**
-
-   - User dapat memilih file dengan beberapa cara:
-     - Mengklik area upload untuk membuka dialog pemilihan file `openFileDialog` dan memilih file manually `handleFileInput`
-     - Melakukan drag and drop file ke area upload `handleFileDrop`
-     - Mengambil foto langsung dari kamera (khusus perangkat mobile) `handleCapture`
-   - Validasi file yang dipilih:
-     - Tipe file harus JPG atau PNG
-     - Ukuran file tidak boleh lebih dari 2MB
-   - Setelah file valid:
-     - File dibaca menggunakan FileReader untuk membaca konten file sebagai base64 encoded string `handleFileSelect`
-     - Preview gambar ditampilkan menggunakan base64 encoded string
-     - State `error` dikosongkan
-   - Penanganan Drag and Drop:
-     - Event `dragOver` menampilkan efek visual saat file di-drag
-     - Event `dragLeave` menghilangkan efek visual saat file keluar area
-     - Event `drop` menangkap file dan memprosesnya menggunakan `handleFileSelect`
-
-4. **Proses Penyimpanan Avatar**
-
-   - Saat user mengklik tombol "Upload":
-     - State `uploading` diubah menjadi `true`
-     - File dikonversi ke FormData menggunakan `formData.append` dan `blob`
-     - Data dikirim ke server menggunakan API
-     - Jika berhasil:
-       - Avatar kontak diperbarui
-       - User diarahkan kembali ke halaman utama
-     - Jika gagal:
-       - Pesan error ditampilkan
-       - State `uploading` diubah menjadi `false`
-
-5. **Pembatalan Upload**
-   - User dapat membatalkan proses dengan mengklik tombol "Cancel"
-   - Saat dibatalkan:
-     - Preview dihapus
-     - User diarahkan kembali ke halaman utama
-     - Tidak ada perubahan pada avatar kontak
-
-# 6. Proses Fitur Delete Contact dari mulai user mengklik button "Delete Contact" pada halaman utama
-
-Proses fitur Delete Contact terdiri dari beberapa tahapan:
-
-1. **Inisiasi Proses Delete (`frontend/src/components/ContactCard.js`)**
-
-   - Setiap card kontak memiliki tombol "Delete"
-   - Saat tombol "Delete" diklik:
-     - Fungsi `handleDelete` dipanggil
-     - State `showConfirm` diubah menjadi `true`
-     - Dialog konfirmasi penghapusan ditampilkan
-
-2. **Dialog Konfirmasi**
-
-   - Dialog konfirmasi muncul dengan dua pilihan:
-     - "Yes": untuk melanjutkan penghapusan
-     - "No": untuk membatalkan penghapusan
-   - Jika user memilih "No":
-     - State `showConfirm` diubah menjadi `false`
-     - Dialog konfirmasi ditutup
-     - Tidak ada perubahan pada data kontak
-
-3. **Proses Penghapusan (`frontend/src/components/ContactCard.js`)**
-
-   - Jika user memilih "Yes":
-     - Fungsi `confirmDelete` dipanggil
-     - Fungsi ini melakukan:
-       - Memanggil fungsi `onDelete` dengan parameter `contact.id`
-       - Mengirim request delete ke API
-       - Menutup dialog konfirmasi dengan mengubah `showConfirm` menjadi `false`
-
-4. **Penanganan di MainPage (`frontend/src/components/MainPage.js**)\*\*
-
-   - Fungsi `handleDelete` dipanggil dengan parameter ID kontak:
-     ```javascript
-     const handleDelete = async (id) => {
-       try {
-         await api.deleteContact(id);
-         const updatedContacts = contacts.filter(
-           (contact) => contact.id !== id
-         );
-         refreshContacts(updatedContacts);
-         setContacts(updatedContacts);
-       } catch (error) {
-         console.log("Error deleting contact: ", error);
-       }
-     };
-     ```
-   - Setelah penghapusan berhasil:
-     - Data kontak difilter untuk menghapus kontak dengan ID yang dihapus
-     - Fungsi `refreshContacts` dipanggil untuk memperbarui tampilan
-     - State kontak diperbarui dengan `setContacts`
-   - Jika terjadi error:
-     - Error dicatat di console
-     - State kontak tidak berubah
-
-5. **Integrasi dengan API (`frontend/src/services/api.js**)\*\*
-   - Implementasi fungsi `deleteContact` di API service:
-     ```javascript
-     deleteContact: async (id) => {
-       try {
-         const response = await axios.delete(`${API_URL}/phonebooks/${id}`);
-         console.log(response.data);
-         return response.data;
-       } catch (error) {
-         console.log("Error deleting contact: ", error);
-         throw error;
-       }
-     };
-     ```
-   - Proses yang terjadi:
-     - Request DELETE dikirim ke endpoint `/phonebooks/${id}`
-     - Response dari server dilog ke console
-     - Jika berhasil, response data dikembalikan
-     - Jika gagal, error dilempar untuk ditangani di komponen
-
-# 7. Proses Fitur Search Contact dari mulai user menginput keyword pada field "Search Contact" pada halaman utama
-
-Proses fitur Search Contact terdiri dari beberapa tahapan:
-
-1. **Komponen SearchBar (`frontend/src/components/SearchBar.js`)**
-
-   - Input field search memiliki event handler `handleSearchChange`:
-     ```javascript
-     const handleSearchChange = (e) => {
-       const newSearch = e.target.value;
-       onSearch(newSearch);
-     };
-     ```
-   - Setiap perubahan pada input field:
-     - Nilai input baru diambil dari `e.target.value`
-     - Fungsi `onSearch` dipanggil dengan nilai baru
-
-2. **Penanganan di MainPage (`frontend/src/components/MainPage.js**)\*\*
-
-   - Fungsi `handleSearch` menangani pencarian:
-     ```javascript
-     const handleSearch = (value) => {
-       setSearch(value);
-       if (value === "") {
-         sessionStorage.removeItem("contactSearch");
-       } else {
-         sessionStorage.setItem("contactSearch", value);
-         sessionStorage.removeItem("searchActive", "true");
-       }
-     };
-     ```
-   - Proses yang terjadi:
-     - Nilai pencarian disimpan ke state dengan `setSearch`
-     - Jika nilai kosong, hapus dari sessionStorage
-     - Jika ada nilai, simpan ke sessionStorage
-
-3. **Custom Hook useContacts (`frontend/src/hooks/useContacts.js`)**
-
-   - Hook ini mengelola state dan logika pencarian:
-
-     ```javascript
-     const [search, setSearch] = useState(() => {
-       const savedSearch = sessionStorage.getItem("contactSearch");
-       const isActive = sessionStorage.getItem("searchActive");
-       return isActive === "true" ? savedSearch : "";
-     });
-
-     const handleSearch = useCallback((value) => {
-       setSearch(value);
-       if (value === "") {
-         sessionStorage.removeItem("contactSearch");
-       } else {
-         sessionStorage.setItem("contactSearch", value);
-         sessionStorage.removeItem("searchActive", "true");
-       }
-     }, []);
-
-     useEffect(() => {
-       sessionStorage.setItem("contactSearch", search);
-       const fetchData = async () => {
-         setContacts([]);
-         setPage(1);
-         setHasMore(true);
-         await loadContacts(false);
-       };
-       fetchData();
-     }, [search, sortBy, sortOrder]);
-     ```
-
-   - State dan fungsi yang dikelola:
-     - `search`: Menyimpan nilai keyword pencarian
-     - `handleSearch`: Menangani perubahan nilai pencarian
-     - `useEffect`: Memicu pencarian saat nilai search berubah
-
-4. **Integrasi dengan API (`frontend/src/services/api.js**)\*\*
-
-   - Implementasi fungsi `getContacts` di API service:
-     ```javascript
-     getContacts: async (
-       page = 1,
-       limit = 5,
-       sortBy = "name",
-       sortOrder = "asc",
-       search = ""
-     ) => {
-       try {
-         const response = await axios.get(`${API_URL}/phonebooks`, {
-           params: { page, limit, sortBy, sortOrder, name: search },
-         });
-         return response.data;
-       } catch (error) {
-         console.log("Error getting contacts: ", error);
-         throw error;
-       }
-     };
-     ```
-   - Parameter pencarian dikirim sebagai query parameter
-   - Response dari server berisi daftar kontak yang sesuai dengan keyword pencarian
-
-5. **Alur Proses Keseluruhan**
-
-   - Pencarian:
-
-     1. User mengetik keyword di search field
-     2. `handleSearchChange` dipanggil setiap perubahan input
-     3. State pencarian diperbarui di useContacts
-     4. Data diambil dari API dengan parameter pencarian
-     5. Hasil ditampilkan di daftar kontak
-
-   - Pengurutan:
-
-     1. User mengklik tombol sort
-     2. `handleSort` mengubah urutan (asc/desc)
-     3. State pengurutan diperbarui
-     4. Data diambil ulang dengan urutan baru
-     5. Daftar kontak diperbarui
-
-   - Edit Contact:
-     1. User mengklik tombol edit
-     2. Form edit ditampilkan dengan data kontak
-     3. Setelah edit, data dikirim ke API
-     4. Daftar kontak diperbarui sesuai hasil edit
-     5. Tampilan disesuaikan dengan filter pencarian aktif
-
-# 8. Proses Fitur Search, Sorting, dan Edit Contact dari mulai user menginput keyword pada field "Search Contact" pada halaman utama dan mengklik sort button dan juga mengklik tombol edit pada halaman utama
-
-Proses ini terdiri dari beberapa bagian utama:
-
-1. **Fitur Search dan Sorting di SearchBar (`frontend/src/components/SearchBar.js`)**
-
    ```javascript
-   const SearchBar = ({ value = "", onSearch, onSort, onAdd }) => {
-     const [sortOrder, setSortOrder] = useState(() => {
-       return sessionStorage.getItem("sortOrder") || "asc";
-     });
-
-     const handleSort = () => {
-       const newSortOrder = sortOrder === "asc" ? "desc" : "asc";
-       setSortOrder(newSortOrder);
-       sessionStorage.setItem("sortOrder", newSortOrder);
-       onSort("name", newSortOrder);
-     };
-
-     const handleSearchChange = (e) => {
-       const newSearch = e.target.value;
-       onSearch(newSearch);
-     };
-   ```
-
-   - Komponen mengelola:
-     - Input pencarian dengan `handleSearchChange`
-     - Tombol pengurutan dengan `handleSort`
-     - Menyimpan state pengurutan di sessionStorage
-
-2. **Penanganan State di useContacts (`frontend/src/hooks/useContacts.js`)**
-
-   ```javascript
-   const handleSort = useCallback((sortBy, sortOrder) => {
-     sessionStorage.setItem("contactSortBy", sortBy);
-     sessionStorage.setItem("contactSortOrder", sortOrder);
-     setPage(1);
-     setContacts([]);
-     setSortBy(sortBy);
-     setSortOrder(sortOrder);
-   }, []);
-
-   const loadContacts = useCallback(
-     async (loadMore = false) => {
-       if (loading) return;
-       setLoading(true);
-       setError(null);
-
-       try {
-         const currentPage = loadMore ? page + 1 : 1;
-         const { phonebooks, ...pagination } = await api.getContacts(
-           currentPage,
-           10,
-           sortBy,
-           sortOrder,
-           search
-         );
-
-         if (Array.isArray(phonebooks)) {
-           if (loadMore) {
-             setContacts((prev) => {
-               const existingIds = new Set(prev.map((contact) => contact.id));
-               const newContacts = phonebooks.filter(
-                 (contact) => !existingIds.has(contact.id)
-               );
-               return [...prev, ...newContacts];
-             });
-           } else {
-             setContacts(phonebooks);
-           }
-           setHasMore(currentPage < pagination.pages);
-           setPage(currentPage);
-         }
-       } catch (error) {
-         setError(error);
-       } finally {
-         setLoading(false);
+   const handleSubmit = async (e) => {
+     e.preventDefault();
+     setIsSubmitting(true);
+     
+     try {
+       // Validasi input
+       if (!form.name || !form.phone) {
+         setError('Nama dan nomor telepon harus diisi');
+         return;
        }
-     },
-     [search, sortBy, sortOrder, loading, page]
-   );
+       
+       // Proses penyimpanan data
+       await onAdd(form);
+       
+       // Kembali ke halaman utama
+       handleCancel();
+     } catch (error) {
+       setError(error.message);
+     } finally {
+       setIsSubmitting(false);
+     }
+   };
    ```
+   - Mencegah perilaku default form HTML
+   - Menandai proses penyimpanan sedang berlangsung dengan `setIsSubmitting` menjadi `true`
+   - Melakukan validasi input (nama dan nomor telepon wajib diisi)
+   - Memanggil fungsi `onAdd` untuk menyimpan data ke server
+   - Menangani error jika terjadi kesalahan
+   - Menandai proses penyimpanan selesai dengan `setIsSubmitting` kembali ke `false`
+   - Mengatur status loading saat proses berlangsung
+   - Mencegah perilaku default form HTML, seperti refresh halaman, dengan cara memanggil `e.preventDefault()`.
 
-   - Mengelola state untuk:
-     - Pencarian dengan `search`
-     - Pengurutan dengan `sortBy` dan `sortOrder`
-     - Memuat data dengan `loadContacts`
+4. **Integrasi dengan API**
+   ```javascript
+   // Di services/api.js
+   const addContact = async (contact) => {
+     try {
+       const response = await axios.post(`${API_URL}/phonebooks`, contact);
+       return response.data;
+     } catch (error) {
+       throw new Error('Gagal menambahkan kontak');
+     }
+   };
+   ```
+   - Mengirim permintaan POST ke endpoint API
+   - Menyertakan data kontak dalam body request
+   - Mengembalikan response dari server atau error jika gagal
 
-3. **Fitur Edit Contact di MainPage (`frontend/src/components/MainPage.js`)**
+## 3.3. Alur Proses Lengkap
 
+1. **Tahap Awal**
+   - Pengguna mengklik tombol "Add Contact" di halaman utama
+   - React Router mengarahkan ke halaman Add Contact
+   - Komponen AddContact ditampilkan dengan form kosong
+
+2. **Tahap Pengisian**
+   - Pengguna mengisi nama dan nomor telepon
+   - State form diperbarui setiap ada perubahan input
+   - Validasi dilakukan secara realtime
+
+3. **Tahap Penyimpanan**
+   - Pengguna mengklik tombol "Save"
+   - Sistem melakukan validasi akhir
+   - Data dikirim ke server melalui API
+   - Indikator loading ditampilkan selama proses
+
+4. **Tahap Akhir**
+   - Jika berhasil: kembali ke halaman utama
+   - Jika gagal: menampilkan pesan error
+   - Form dikosongkan untuk input baru
+
+Proses ini menggunakan fitur-fitur React modern seperti Hooks dan penanganan event untuk memberikan pengalaman yang baik dalam menambahkan kontak baru.
+
+# 4. Proses Fitur Edit Contact dari mulai user mengklik button "Edit Contact" pada halaman utama dan kemudian mengklik tombol "Save" pada halaman Edit Contact  
+
+Berikut adalah penjelasan detail proses edit kontak dari awal hingga akhir:
+
+## 4.1. Komponen ContactCard (`frontend/src/components/ContactCard.js`)
+
+1. **Inisialisasi State dan Props**
+   ```javascript
+   const ContactCard = ({ contact, onEdit, onDelete, onAvatarUpdate }) => {
+     // State untuk mode edit
+     const [isEditing, setIsEditing] = useState(false);
+     // State untuk data form
+     const [form, setForm] = useState({
+       name: contact.name,
+       phone: contact.phone
+     });
+   }
+   ```
+   - Menerima props `contact` yang berisi data kontak dan fungsi-fungsi callback
+   - Membuat state `isEditing` untuk mengontrol mode tampilan (edit/normal)
+   - Membuat state `form` yang diinisialisasi dengan data kontak saat ini
+
+2. **Penanganan Mode Edit**
+   ```javascript
+   // Tombol Edit di tampilan normal
+   <button onClick={() => setIsEditing(true)} aria-label="Edit contact">
+     <BsPencilSquare />
+   </button>
+
+   // Tampilan form edit
+   {isEditing ? (
+     <div className="edit-form">
+       <input
+         type="text"
+         name="name"
+         value={form.name}
+         onChange={handleChange}
+         className="edit-input"
+         placeholder="Name"
+       />
+       <input
+         type="text"
+         name="phone"
+         value={form.phone}
+         onChange={handleChange}
+         className="edit-input"
+         placeholder="Phone"
+       />
+     </div>
+   ) : (
+     // Tampilan normal
+   )}
+   ```
+   - Saat tombol edit diklik, `setIsEditing(true)` mengaktifkan mode edit
+   - Form edit ditampilkan dengan data kontak yang sudah ada
+   - Input field terhubung dengan state `form` melalui `value` dan `onChange`
+
+## 4.2. Proses Update Data (`MainPage.js`)
+
+1. **Fungsi Handle Edit**
    ```javascript
    const handleEdit = async (id, updatedContact) => {
+     if (!id) {
+       console.error("No contact ID provided for deletion");
+       return;
+     }
+
      try {
+       // Kirim data ke API
        await api.updateContact(id, updatedContact);
 
+       // Cek apakah masih sesuai dengan pencarian
        if (search) {
          const searchLower = search.toLowerCase();
          const isStillMatching =
            updatedContact.name.toLowerCase().includes(searchLower) ||
            updatedContact.phone.toLowerCase().includes(searchLower);
 
+         // Hapus dari list jika tidak sesuai pencarian
          if (!isStillMatching) {
-           const updatedContacts = contacts.filter(
+           const filteredContacts = contacts.filter(
              (contact) => contact.id !== id
            );
-           setContacts(updatedContacts);
+           dispatch({ type: ACTIONS.SET_CONTACTS, payload: filteredContacts });
            return;
          }
        }
 
+       // Update state kontak
        const updatedContacts = contacts.map((contact) =>
-         contact.id === id ? updatedContact : contact
+         contact.id === id ? { ...contact, ...updatedContact } : contact
        );
-       refreshContacts(updatedContacts);
-       setContacts(updatedContacts);
+       dispatch({ type: ACTIONS.SET_CONTACTS, payload: updatedContacts });
+       
+       // Reload data
+       loadContacts(false);
      } catch (error) {
-       console.log("Error updating contact: ", error);
+       console.error("Error updating contact:", error);
      }
    };
    ```
+   - Mengirim data update ke API
+   - Memvalidasi hasil edit dengan filter pencarian yang aktif
+   - Memperbarui state kontak di aplikasi
+   - Menangani error jika terjadi masalah
 
-   - Proses edit meliputi:
-     - Update data kontak melalui API
-     - Pengecekan apakah hasil edit masih sesuai filter pencarian
-     - Pembaruan tampilan daftar kontak
-
-4. **Integrasi dengan API (`frontend/src/services/api.js**)\*\*
-
+2. **Integrasi dengan API**
    ```javascript
-   export const api = {
-     getContacts: async (
-       page = 1,
-       limit = 5,
-       sortBy = "name",
-       sortOrder = "asc",
-       search = ""
-     ) => {
-       try {
-         const response = await axios.get(`${API_URL}/phonebooks`, {
-           params: { page, limit, sortBy, sortOrder, name: search },
-         });
-         return response.data;
-       } catch (error) {
-         console.log("Error getting contacts: ", error);
-         throw error;
-       }
-     },
-
+   // Di services/api.js
+   const api = {
      updateContact: async (id, contact) => {
        try {
          const response = await axios.put(
@@ -904,177 +434,1053 @@ Proses ini terdiri dari beberapa bagian utama:
          );
          return response.data;
        } catch (error) {
-         console.log("Error updating contact: ", error);
          throw error;
        }
-     },
+     }
+   };
+   ```
+   - Mengirim request PUT ke endpoint API
+   - Menyertakan ID kontak dan data yang diupdate
+   - Mengembalikan response dari server
+
+## 4.3. Alur Proses Lengkap
+
+1. **Tahap Inisiasi Edit**
+   - User mengklik tombol edit (ikon pensil) pada card kontak
+   - State `isEditing` diubah menjadi true
+   - Form edit ditampilkan dengan data kontak yang ada
+
+2. **Tahap Pengisian Form**
+   - User dapat mengubah nama dan nomor telepon
+   - Setiap perubahan langsung diupdate ke state `form`
+   - Validasi input dilakukan secara realtime
+
+3. **Tahap Penyimpanan**
+   - User mengklik tombol "Save"
+   - Data dikirim ke server melalui API
+   - State aplikasi diperbarui sesuai response
+   - Mode edit dinonaktifkan jika berhasil
+
+4. **Penanganan Khusus**
+   - Jika sedang dalam mode pencarian:
+     - Sistem mengecek apakah hasil edit masih sesuai filter
+     - Kontak dihapus dari list jika tidak sesuai
+   - Jika terjadi error:
+     - Error ditampilkan di console
+     - User tetap dalam mode edit
+
+Proses ini menggunakan fitur-fitur React modern seperti Hooks dan penanganan event untuk memberikan pengalaman yang baik dalam menghapus kontak.
+
+# 5. Proses Fitur Upload Avatar dari mulai user mengklik gambar avatar pada halaman utama
+
+Proses fitur Upload Avatar terdiri dari beberapa tahapan:
+
+1. **Inisiasi Upload Avatar**
+   
+   Proses dimulai dari komponen `ContactCard.js` ketika user mengklik gambar avatar:
+   ```javascript
+   const handleAvatarClick = () => {
+     onAvatarUpdate(contact.id);
+   };
+   ```
+   
+   Di `MainPage.js`, fungsi ini akan mengarahkan ke halaman upload:
+   ```javascript
+   const handleAvatarUpdate = (id) => {
+     navigate(`/avatar/${id}`);
    };
    ```
 
-   - API menyediakan endpoint untuk:
-     - Mengambil data dengan parameter pencarian dan pengurutan
-     - Mengupdate data kontak yang diedit
-
-5. **Alur Proses Keseluruhan**
-
-   - Pencarian:
-
-     1. User mengetik keyword di search field
-     2. `handleSearchChange` dipanggil setiap perubahan input
-     3. State pencarian diperbarui di useContacts
-     4. Data diambil dari API dengan parameter pencarian
-     5. Hasil ditampilkan di daftar kontak
-
-   - Pengurutan:
-
-     1. User mengklik tombol sort
-     2. `handleSort` mengubah urutan (asc/desc)
-     3. State pengurutan diperbarui
-     4. Data diambil ulang dengan urutan baru
-     5. Daftar kontak diperbarui
-
-   - Edit Contact:
-     1. User mengklik tombol edit
-     2. Form edit ditampilkan dengan data kontak
-     3. Setelah edit, data dikirim ke API
-     4. Daftar kontak diperbarui sesuai hasil edit
-     5. Tampilan disesuaikan dengan filter pencarian aktif
-
-# 9. Proses Fitur Edit Contact dapat dilakukan perubahaan secara bersamaan di halaman utama
-
-Fitur Edit Contact memungkinkan pengguna untuk mengedit beberapa kontak secara bersamaan di halaman utama. Berikut adalah penjelasan detailnya:
-
-1. **Komponen ContactCard (`frontend/src/components/ContactCard.js`)**
-
+2. **Komponen AvatarUpload (`AvatarUpload.js`)**
+   
+   Komponen ini menginisialisasi beberapa state penting:
    ```javascript
-   const ContactCard = ({ contact, onEdit, onDelete, onAvatarUpdate }) => {
-     const [isEditing, setIsEditing] = useState(false);
-     const [form, setForm] = useState({
-       name: contact.name,
-       phone: contact.phone,
-     });
+   const [preview, setPreview] = useState(null);        // Preview gambar
+   const [currentAvatar, setCurrentAvatar] = useState(null); // Avatar saat ini
+   const [uploading, setUploading] = useState(false);   // Status upload
+   const [error, setError] = useState('');             // Pesan error
+   const fileInputRef = useRef(null);                  // Referensi input file
+   ```
 
-     const handleSave = async () => {
-       try {
-         await onEdit(contact.id, form);
-         setIsEditing(false);
-       } catch (error) {
-         console.log("Error Updating Contact", error);
+   Saat komponen dimuat, data avatar saat ini diambil:
+   ```javascript
+   useEffect(() => {
+     const fetchContact = async () => {
+       const contact = await api.getContactById(id);
+       if (contact) {
+         setCurrentAvatar(contact.photo);
        }
      };
+     fetchContact();
+   }, [id]);
+   ```
 
-     const handleChange = (e) => {
-       const { name, value } = e.target;
-       setForm((prev) => ({
-         ...prev,
-         [name]: value,
-       }));
-     };
+3. **Metode Upload File**
+
+   User dapat memilih file dengan 3 cara:
+   
+   a. **Drag & Drop**:
+   ```javascript
+   const handleDrop = (e) => {
+     e.preventDefault();
+     const file = e.dataTransfer.files[0];
+     if (file) handleFileSelect(file);
+   };
+   ```
+   
+   b. **Pilih File Manual**:
+   ```javascript
+   const handleFileInput = (e) => {
+     const file = e.target.files[0];
+     if (file) handleFileSelect(file);
+   };
+   ```
+   
+   c. **Ambil Foto (Mobile)**:
+   ```javascript
+   const handleCapture = async () => {
+     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+     // Proses pengambilan foto
    };
    ```
 
-   - Setiap card kontak memiliki:
-     - State `isEditing` untuk mode edit
-     - State `form` untuk data yang sedang diedit
-     - Fungsi `handleSave` untuk menyimpan perubahan
-     - Fungsi `handleChange` untuk update form
+4. **Validasi File**
 
-2. **Penanganan State Lokal**
-
-   - Setiap card mengelola state editingnya sendiri:
-     ```javascript
-     return (
-       <div className="contact-card">
-         {isEditing ? (
-           <div className="edit-form">
-             <input
-               type="text"
-               name="name"
-               value={form.name}
-               onChange={handleChange}
-               className="edit-input"
-               placeholder="Name"
-             />
-             <input
-               type="text"
-               name="phone"
-               value={form.phone}
-               onChange={handleChange}
-               className="edit-input"
-               placeholder="Phone"
-             />
-             <div className="edit-buttons">
-               <button onClick={handleSave}>Save</button>
-               <button onClick={() => setIsEditing(false)}>Cancel</button>
-             </div>
-           </div>
-         ) : (
-           // Tampilan normal kontak
-         )}
-       </div>
-     );
-     ```
-   - Keuntungan pendekatan ini:
-     - Setiap kontak dapat diedit independen
-     - Tidak mempengaruhi state kontak lain
-     - UI tetap responsif saat mengedit
-
-3. **Penanganan di MainPage**
-
+   Setiap file yang dipilih akan divalidasi:
    ```javascript
-   const handleEdit = async (id, updatedContact) => {
+   const handleFileSelect = (file) => {
+     // Validasi tipe file
+     const validTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+     if (!validTypes.includes(file.type)) {
+       setError('Pilih file gambar yang valid (JPG, PNG)');
+       return;
+     }
+
+     // Validasi ukuran file (max 5MB)
+     if (file.size > 5 * 1024 * 1024) {
+       setError('Ukuran file harus kurang dari 5MB');
+       return;
+     }
+
+     // Buat preview
+     const reader = new FileReader();
+     reader.onloadend = () => {
+       setPreview(reader.result);
+       setError('');
+     };
+     reader.readAsDataURL(file);
+   };
+   ```
+
+5. **Proses Upload ke Server**
+
+   Saat user mengklik tombol "Unggah Avatar":
+   ```javascript
+   const handleUpload = async () => {
      try {
-       await api.updateContact(id, updatedContact);
+       setUploading(true);
+       
+       // Konversi preview ke File
+       const response = await fetch(preview);
+       const blob = await response.blob();
+       const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
 
-       if (search) {
-         const searchLower = search.toLowerCase();
-         const isStillMatching =
-           updatedContact.name.toLowerCase().includes(searchLower) ||
-           updatedContact.phone.toLowerCase().includes(searchLower);
-
-         if (!isStillMatching) {
-           const updatedContacts = contacts.filter(
-             (contact) => contact.id !== id
-           );
-           setContacts(updatedContacts);
-           return;
-         }
-       }
-
-       const updatedContacts = contacts.map((contact) =>
-         contact.id === id ? updatedContact : contact
-       );
-       refreshContacts(updatedContacts);
-       setContacts(updatedContacts);
-     } catch (error) {
-       console.log("Error updating contact: ", error);
+       // Kirim ke server
+       const formData = new FormData();
+       formData.append('photo', file);
+       await api.updateAvatar(id, formData);
+       
+       // Update UI dan redirect
+       if (onAvatarUpdate) await onAvatarUpdate();
+       navigate('/');
+     } catch (err) {
+       setError('Gagal mengunggah avatar. Silakan coba lagi.');
+     } finally {
+       setUploading(false);
      }
    };
    ```
 
-   - Fungsi ini menangani:
-     - Update data ke API
-     - Pengecekan filter pencarian
-     - Pembaruan state global kontak
-     - Penanganan error
+6. **Penanganan Error dan Loading State**
 
-4. **Alur Proses Edit Bersamaan**
+   - Komponen menampilkan loading state saat proses upload
+   - Error ditampilkan jika terjadi masalah dalam proses
+   - User dapat membatalkan proses kapan saja dengan tombol "Batal"
 
-   - User dapat:
-     1. Mengklik tombol edit di beberapa kontak
-     2. Mengedit data di form yang muncul
-     3. Menyimpan perubahan secara independen
-     4. Membatalkan edit tanpa mempengaruhi kontak lain
-   - Sistem akan:
-     1. Mengelola state edit untuk setiap kontak
-     2. Menyimpan perubahan ke API satu per satu
-     3. Memperbarui tampilan sesuai hasil edit
-     4. Menangani error untuk setiap operasi edit
+7. **Fitur UI/UX**
 
-5. **Keunggulan Implementasi**
-   - Multi-edit: Beberapa kontak dapat diedit bersamaan
-   - Independen: Perubahan satu kontak tidak mempengaruhi yang lain
-   - Responsif: UI tetap lancar saat mengedit banyak kontak
-   - Konsisten: State global tetap terjaga untuk semua kontak
+   - Preview gambar real-time sebelum upload
+   - Indikator visual saat drag & drop
+   - Tombol untuk mengubah gambar setelah preview
+   - Responsive design untuk desktop dan mobile
+   - Opsi kamera khusus untuk perangkat mobile
+
+# 6. Proses Fitur Delete Contact dari mulai user mengklik button "Delete Contact" pada halaman utama
+
+Proses Delete Contact melibatkan beberapa komponen dan tahapan. Berikut adalah penjelasan detail untuk setiap tahapnya:
+
+1. **Inisiasi Delete di ContactCard**
+
+   Di `ContactCard.js`, proses dimulai saat user mengklik tombol Delete:
+   ```javascript
+   const ContactCard = ({ contact, onDelete }) => {
+     const [showConfirm, setShowConfirm] = useState(false);
+     
+     const handleDelete = () => {
+       setShowConfirm(true); // Menampilkan dialog konfirmasi
+     };
+
+     const confirmDelete = () => {
+       onDelete(contact.id); // Memanggil fungsi delete dari parent
+       setShowConfirm(false); // Menutup dialog
+     };
+   };
+   ```
+   - `showConfirm`: State untuk mengontrol visibilitas dialog konfirmasi
+   - `handleDelete`: Menampilkan dialog konfirmasi sebelum penghapusan
+   - `confirmDelete`: Mengeksekusi penghapusan setelah konfirmasi
+
+2. **Penanganan di ContactList**
+
+   `ContactList.js` meneruskan fungsi delete ke setiap ContactCard:
+   ```javascript
+   const ContactList = ({ contacts, onDelete }) => {
+     return (
+       <div className="contact-list">
+         {contacts.map((contact) => (
+           <ContactCard
+             key={contact.id}
+             contact={contact}
+             onDelete={onDelete}
+           />
+         ))}
+       </div>
+     );
+   };
+   ```
+   - Fungsi `onDelete` diteruskan dari MainPage ke setiap ContactCard
+   - Setiap card menerima fungsi yang sama namun dengan ID kontak yang berbeda
+
+3. **Proses Delete di MainPage**
+
+   Di `MainPage.js`, menggunakan useContacts hook untuk mengelola state:
+   ```javascript
+   const MainPage = () => {
+     const {
+       state: { contacts },
+       dispatch,
+       loadContacts
+     } = useContacts();
+
+     const handleDelete = async (id) => {
+       if (!id) {
+         console.error("No contact ID provided for deletion");
+         return;
+       }
+
+       try {
+         await api.deleteContact(id);
+         loadContacts(false); // Refresh daftar kontak
+       } catch (error) {
+         console.error("Error deleting contact:", error);
+       }
+     };
+   };
+   ```
+   - Menggunakan `useContacts` hook untuk state management
+   - `handleDelete`: Menangani proses penghapusan kontak
+   - `loadContacts`: Me-refresh daftar kontak setelah penghapusan
+
+4. **Integrasi dengan useContacts Hook**
+
+   Di `useContacts.js`, terdapat action dan reducer untuk delete:
+   ```javascript
+   export const ACTIONS = {
+     DELETE_CONTACT: 'delete_contact'
+   };
+
+   const contactReducer = (state, action) => {
+     switch (action.type) {
+       case ACTIONS.DELETE_CONTACT:
+         return {
+           ...state,
+           contacts: state.contacts.filter(
+             contact => contact.id !== action.payload
+           )
+         };
+       // ... cases lainnya
+     }
+   };
+   ```
+   - Mendefinisikan action type untuk delete
+   - Reducer memfilter kontak yang dihapus dari state
+
+5. **Komunikasi dengan API**
+
+   Di `api.js`, implementasi request delete ke backend:
+   ```javascript
+   const api = {
+     deleteContact: async (id) => {
+       try {
+         const response = await axios.delete(
+           `${API_URL}/phonebooks/${id}`
+         );
+         return response.data;
+       } catch (error) {
+         throw error;
+       }
+     }
+   };
+   ```
+   - Mengirim DELETE request ke endpoint `/phonebooks/${id}`
+   - Mengembalikan response data jika berhasil
+   - Melempar error jika gagal
+
+**Alur Proses Teknis:**
+
+1. User mengklik tombol "Delete Contact" pada ContactCard
+2. Dialog konfirmasi muncul (`setShowConfirm(true)`)
+3. Jika user mengkonfirmasi:
+   - `confirmDelete()` di ContactCard dipanggil
+   - `onDelete(contact.id)` diteruskan ke ContactList
+   - `handleDelete(id)` di MainPage dieksekusi
+4. MainPage melakukan:
+   - Memanggil `api.deleteContact(id)`
+   - Menunggu response dari server
+   - Memanggil `loadContacts(false)` untuk refresh data
+5. useContacts hook:
+   - Menerima data baru dari API
+   - Memperbarui state global
+   - Memicu re-render komponen terkait
+6. UI diperbarui menampilkan daftar kontak tanpa item yang dihapus
+
+Proses fitur Delete Contact ini menggunakan fitur-fitur React modern seperti Hooks dan penanganan event untuk memberikan pengalaman yang baik dalam menghapus kontak.
+
+# 7. Proses Fitur Search Contact dari mulai user menginput keyword pada field "Search Contact" pada halaman utama
+
+Proses Search Contact melibatkan beberapa komponen dan tahapan. Berikut adalah penjelasan detail untuk setiap tahapnya:
+
+1. **Inisiasi Search di SearchBar**
+
+   Di `SearchBar.js`, proses dimulai saat user mengetik di field search:
+   ```javascript
+   const SearchBar = ({ value = "", onChange }) => {
+     const handleSearchChange = (e) => {
+       const newSearch = e.target.value;
+       onChange(newSearch); // Memanggil handleSearch di MainPage
+     };
+
+     return (
+       <input
+         type="text"
+         value={value}
+         onChange={handleSearchChange}
+         placeholder="Search contacts..."
+         className="search-input"
+       />
+     );
+   };
+   ```
+   - `value`: Nilai search dari MainPage
+   - `onChange`: Callback function untuk update nilai search
+   - `handleSearchChange`: Menangani perubahan input search
+
+2. **Penanganan di MainPage**
+
+   `MainPage.js` menggunakan useContacts hook untuk state management:
+   ```javascript
+   const MainPage = () => {
+     const {
+       state: { contacts, search },
+       handleSearch,
+       loadContacts
+     } = useContacts();
+
+     useEffect(() => {
+       loadContacts(false);
+     }, [search]);
+
+     return (
+       <SearchBar
+         value={search}
+         onChange={handleSearch}
+       />
+     );
+   };
+   ```
+   - Menggunakan `useContacts` hook untuk state management
+   - `handleSearch`: Memperbarui state pencarian
+   - `loadContacts`: Me-refresh daftar kontak setelah pencarian
+
+3. **State Management dengan useContacts Hook**
+
+   Di `useContacts.js`, logika pencarian diimplementasikan:
+   ```javascript
+   const ContactProvider = ({ children }) => {
+     const [state, dispatch] = useReducer(contactReducer, initialState);
+
+   const handleSearch = useCallback((value) => {
+     dispatch({ type: ACTIONS.SET_SEARCH, payload: value });
+   }, []);
+
+     useEffect(() => {
+       const fetchData = async () => {
+         await loadContacts(false);
+       };
+       fetchData();
+     }, [state.search]); // Re-fetch saat search berubah
+   };
+   ```
+   - `handleSearch`: Memperbarui state pencarian
+   - `useEffect`: Memicu pencarian ulang saat search berubah
+   - `loadContacts`: Me-refresh daftar kontak setelah pencarian
+
+4. **Integrasi dengan API**
+
+   Di `api.js`, request pencarian ke backend:
+   ```javascript
+   const api = {
+     getContacts: async (
+       page = 1,
+       limit = 10,
+       sortBy = "name",
+       sortOrder = "asc",
+       search = ""
+     ) => {
+       try {
+         const response = await axios.get(`${API_URL}/phonebooks`, {
+           params: { page, limit, sortBy, sortOrder, name: search }
+         });
+         return response.data;
+       } catch (error) {
+         throw error;
+       }
+     }
+   };
+   ```
+   - Mengirim parameter search ke API
+   - Menangani pagination dan sorting
+   - Mengembalikan hasil pencarian
+
+**Alur Proses Teknis:**
+
+1. User mengetik keyword di search field
+   - Event `onChange` di SearchBar dipanggil
+   - `handleSearchChange` mengirim nilai baru ke parent
+
+2. MainPage menerima perubahan
+   - `handleSearch` dari useContacts dipanggil
+   - State search diperbarui
+   - `loadContacts` dipanggil untuk data baru
+
+3. useContacts Hook bereaksi
+   - `useEffect` mendeteksi perubahan search
+   - Memanggil `loadContacts` untuk data baru
+
+4. Proses Fetch Data
+   - Request GET ke API dengan parameter search
+   - API memproses pencarian di backend
+   - Data hasil pencarian diterima
+
+5. Update UI
+   - State contacts diperbarui dengan hasil pencarian
+   - Loading state dinonaktifkan
+   - Daftar kontak dirender ulang
+   - Error ditampilkan jika ada
+
+6. Persistensi State
+   - Query pencarian disimpan di sessionStorage
+   - State aktif pencarian dipertahankan
+   - State dipulihkan saat reload halaman
+
+
+# 8. Proses Fitur Search, Sorting, dan Edit Contact dari mulai user menginput keyword pada field "Search Contact" pada halaman utama dan mengklik sort button dan juga mengklik tombol edit pada halaman utama
+
+## 1. Inisialisasi Komponen
+
+**File: @frontend/src/components/MainPage.js**
+
+```javascript
+import React from 'react';
+import { useContacts } from '../hooks/useContacts';
+import SearchBar from './SearchBar';
+import SortButton from './SortButton';
+import ContactList from './ContactList';
+
+const MainPage = () => {
+  const { state, handleSearch, handleSort } = useContacts();
+
+  return (
+    <div>
+      <SearchBar value={state.search} onChange={handleSearch} />
+      <SortButton sortOrder={state.sortOrder} onSort={handleSort} />
+      <ContactList contacts={state.contacts} />
+    </div>
+  );
+};
+```
+
+1. MainPage mengimpor komponen-komponen yang diperlukan dan hook useContacts.
+2. useContacts menyediakan state dan fungsi-fungsi untuk mengelola kontak.
+3. SearchBar, SortButton, dan ContactList dirender dengan props yang sesuai.
+
+## 2. Implementasi Search
+
+**File: @frontend/src/components/SearchBar.js**
+
+```javascript
+import React from 'react';
+
+const SearchBar = ({ value, onChange }) => {
+  return (
+    <input
+      type="text"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder="Search contacts..."
+    />
+  );
+};
+```
+
+1. SearchBar menerima value dan onChange sebagai props.
+2. Setiap perubahan input akan memanggil onChange dengan nilai baru.
+
+## 3. Implementasi Sort
+
+**File: @frontend/src/components/SortButton.js**
+
+```javascript
+import React from 'react';
+
+const SortButton = ({ sortOrder, onSort }) => {
+  return (
+    <button onClick={() => onSort(sortOrder === 'asc' ? 'desc' : 'asc')}>
+      Sort {sortOrder === 'asc' ? '▲' : '▼'}
+    </button>
+  );
+};
+```
+
+1. SortButton menerima sortOrder dan onSort sebagai props.
+2. Klik pada button akan memanggil onSort dengan nilai yang dibalik.
+
+## 4. Pengelolaan State di useContacts Hook
+
+**File: @frontend/src/hooks/useContacts.js**
+
+```javascript
+import { useReducer, useEffect } from 'react';
+import api from '../services/api';
+
+const useContacts = () => {
+  const [state, dispatch] = useReducer(reducer, initialState);
+
+  const handleSearch = (searchTerm) => {
+    dispatch({ type: 'SET_SEARCH', payload: searchTerm });
+  };
+
+  const handleSort = (sortOrder) => {
+    dispatch({ type: 'SET_SORT_ORDER', payload: sortOrder });
+  };
+
+  useEffect(() => {
+    loadContacts();
+  }, [state.search, state.sortOrder]);
+
+  const loadContacts = async () => {
+    try {
+      const response = await api.getContacts(state.search, state.sortOrder);
+      dispatch({ type: 'SET_CONTACTS', payload: response.data });
+    } catch (error) {
+      console.error('Error loading contacts:', error);
+    }
+  };
+
+  return { state, handleSearch, handleSort };
+};
+```
+
+1. useContacts menggunakan useReducer untuk mengelola state kompleks.
+2. handleSearch dan handleSort memperbarui state melalui dispatch.
+3. useEffect memicu loadContacts setiap kali search atau sortOrder berubah.
+4. loadContacts mengambil data dari API berdasarkan state saat ini.
+
+## Alur Proses Teknis:
+
+1. User mengetik keyword di search field atau mengklik tombol sort.
+   - `onChange` dan `onSort` di SearchBar dan SortButton dipanggil.
+   - `handleSearch` dan `handleSort` dari `useContacts` dipanggil.
+   - State search dan sortOrder diperbarui.
+
+2. MainPage bereaksi terhadap perubahan.
+   - `useEffect` mendeteksi perubahan search atau sortOrder.
+   - Memanggil `loadContacts` untuk memuat data baru.
+
+3. useContacts Hook mengelola state.
+   - `handleSearch` dan `handleSort` mengubah state di reducer.
+   - Data kontak diperbarui dan dirender ulang berdasarkan pencarian dan urutan yang baru.
+
+4. User dapat mengedit kontak di halaman utama.
+   - Klik tombol edit membuka form edit.
+   - Perubahan disimpan dan state diperbarui.
+
+# 9. Proses Fitur Edit Contact dapat dilakukan perubahaan secara bersamaan di halaman utama
+Fitur Edit Contact memungkinkan pengguna untuk mengubah informasi kontak langsung di halaman utama. Berikut adalah penjelasan detail proses ini:
+
+## 1. Inisialisasi Mode Edit
+
+**File: @frontend/src/components/ContactCard.js**
+
+```javascript
+const ContactCard = ({ contact, onEdit }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({ name: contact.name, phone: contact.phone });
+
+  const handleEditClick = () => {
+    setIsEditing(true);
+  };
+
+  // ...
+}
+```
+
+1. `useState` digunakan untuk mengelola state `isEditing` dan `editForm`.
+2. `isEditing` menentukan apakah kartu kontak dalam mode edit.
+3. `editForm` menyimpan data sementara selama proses edit.
+4. `handleEditClick` mengaktifkan mode edit ketika tombol edit diklik.
+
+## 2. Render Komponen Berdasarkan Mode
+
+```javascript
+return (
+  <div className="contact-card">
+    {isEditing ? (
+      <EditForm 
+        form={editForm} 
+        setForm={setEditForm} 
+        onSave={() => {
+          onEdit(contact.id, editForm);
+          setIsEditing(false);
+        }}
+        onCancel={() => setIsEditing(false)}
+      />
+    ) : (
+      <>
+        <div>{contact.name}</div>
+        <div>{contact.phone}</div>
+        <button onClick={handleEditClick}>Edit</button>
+      </>
+    )}
+  </div>
+);
+```
+
+1. Komponen merender `EditForm` jika `isEditing` true, atau tampilan normal jika false.
+2. `EditForm` menerima props untuk mengelola form dan aksi simpan/batal.
+3. Ketika edit disimpan, `onEdit` dipanggil dengan ID kontak dan data baru.
+
+## 3. Implementasi Form Edit
+
+**File: @frontend/src/components/EditForm.js**
+
+```javascript
+const EditForm = ({ form, setForm, onSave, onCancel }) => {
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  return (
+    <form onSubmit={(e) => {
+      e.preventDefault();
+      onSave();
+    }}>
+      <input
+        name="name"
+        value={form.name}
+        onChange={handleChange}
+      />
+      <input
+        name="phone"
+        value={form.phone}
+        onChange={handleChange}
+      />
+      <button type="submit">Save</button>
+      <button type="button" onClick={onCancel}>Cancel</button>
+    </form>
+  );
+};
+```
+
+1. `EditForm` menangani perubahan input dan submission form.
+2. `handleChange` memperbarui state form setiap kali input berubah.
+3. Ketika form di-submit, `onSave` dipanggil untuk memproses perubahan.
+
+## 4. Penanganan Edit di MainPage
+
+**File: @frontend/src/components/MainPage.js**
+
+```javascript
+const MainPage = () => {
+  const { state, handleEdit } = useContacts();
+
+  const onEdit = async (id, updatedContact) => {
+    try {
+      await handleEdit(id, updatedContact);
+      // Mungkin perlu memperbarui UI atau memberikan feedback
+    } catch (error) {
+      console.error("Error updating contact:", error);
+    }
+  };
+
+  return (
+    <div>
+      {state.contacts.map(contact => (
+        <ContactCard 
+          key={contact.id} 
+          contact={contact} 
+          onEdit={onEdit}
+        />
+      ))}
+    </div>
+  );
+};
+```
+
+1. `useContacts` hook digunakan untuk mengakses state global dan fungsi `handleEdit`.
+2. `onEdit` memanggil `handleEdit` dari `useContacts` untuk memproses perubahan.
+3. Setiap `ContactCard` menerima prop `onEdit` untuk menangani perubahan.
+
+## 5. Implementasi Edit di useContacts Hook
+
+**File: @frontend/src/hooks/useContacts.js**
+
+```javascript
+const useContacts = () => {
+  // ...
+
+  const handleEdit = async (id, updatedContact) => {
+    try {
+      const response = await api.updateContact(id, updatedContact);
+      dispatch({ type: 'UPDATE_CONTACT', payload: response.data });
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  // ...
+};
+```
+
+1. `handleEdit` mengirim permintaan update ke API.
+2. Setelah berhasil, dispatch action 'UPDATE_CONTACT' untuk memperbarui state.
+3. Jika terjadi error, error dilempar kembali untuk ditangani di komponen.
+
+## Alur Proses Teknis:
+
+1. Inisiasi Pencarian:
+   - User mengetik keyword di SearchBar
+   - `handleSearchChange` menangkap input
+   - `onChange` meneruskan nilai ke MainPage
+   - `handleSearch` memperbarui state global
+   - State pencarian disimpan ke sessionStorage
+
+2. Tampilan Hasil Pencarian:
+   - useContacts memuat data sesuai keyword
+   - ContactList menampilkan hasil pencarian
+   - UI diperbarui secara real-time
+
+3. Navigasi ke Add Contact:
+   - User mengklik tombol "Add Contact"
+   - `handleAddClick` dipanggil
+   - navigate('/add') dijalankan
+   - Halaman add contact ditampilkan
+
+4. Kembali ke Hasil Pencarian:
+   - User mengklik tombol Cancel
+   - `handleCancel` mengambil state pencarian
+   - navigate dengan query search
+   - MainPage memulihkan state pencarian
+   - Hasil pencarian sebelumnya ditampilkan kembali
+
+Proses ini memastikan pengalaman pengguna yang mulus dengan mempertahankan state pencarian saat navigasi antar halaman.
 
 # 10. Proses Fitur searching dan sorting
+Proses Fitur Searching dan Sorting di Halaman Utama
+
+## 1. Inisialisasi Komponen
+
+**File: @frontend/src/components/MainPage.js**
+
+```javascript
+import React from 'react';
+import { useContacts } from '../hooks/useContacts';
+import SearchBar from './SearchBar';
+import SortButton from './SortButton';
+import ContactList from './ContactList';
+
+const MainPage = () => {
+  const { state, handleSearch, handleSort } = useContacts();
+
+  return (
+    <div>
+      <SearchBar 
+        value={state.search}
+        onChange={handleSearch}
+      />
+      <SortButton 
+        sortOrder={state.sortOrder}
+        onSort={handleSort}
+      />
+      <ContactList 
+        contacts={state.contacts}
+      />
+    </div>
+  );
+};
+```
+
+1. MainPage mengimpor komponen-komponen yang diperlukan dan hook useContacts.
+2. useContacts menyediakan state dan fungsi-fungsi untuk mengelola kontak.
+3. SearchBar, SortButton, dan ContactList dirender dengan props yang sesuai.
+
+## 2. Implementasi Search
+
+**File: @frontend/src/components/SearchBar.js**
+
+```javascript
+import React from 'react';
+
+const SearchBar = ({ value, onChange }) => {
+  return (
+    <input
+      type="text"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder="Search contacts..."
+    />
+  );
+};
+```
+
+1. SearchBar menerima value dan onChange sebagai props.
+2. Setiap perubahan input akan memanggil onChange dengan nilai baru.
+
+## 3. Implementasi Sort
+
+**File: @frontend/src/components/SortButton.js**
+
+```javascript
+import React from 'react';
+
+const SortButton = ({ sortOrder, onSort }) => {
+  return (
+    <button onClick={() => onSort(sortOrder === 'asc' ? 'desc' : 'asc')}>
+      Sort {sortOrder === 'asc' ? '▲' : '▼'}
+    </button>
+  );
+};
+```
+
+1. SortButton menerima sortOrder dan onSort sebagai props.
+2. Klik pada button akan memanggil onSort dengan nilai yang dibalik.
+
+## 4. Pengelolaan State di useContacts Hook
+
+**File: @frontend/src/hooks/useContacts.js**
+
+```javascript
+import { useReducer, useEffect } from 'react';
+import api from '../services/api';
+
+const useContacts = () => {
+  const [state, dispatch] = useReducer(reducer, initialState);
+
+  const handleSearch = (searchTerm) => {
+    dispatch({ type: 'SET_SEARCH', payload: searchTerm });
+  };
+
+  const handleSort = (sortOrder) => {
+    dispatch({ type: 'SET_SORT_ORDER', payload: sortOrder });
+  };
+
+  useEffect(() => {
+    loadContacts();
+  }, [state.search, state.sortOrder]);
+
+  const loadContacts = async () => {
+    try {
+      const response = await api.getContacts(state.search, state.sortOrder);
+      dispatch({ type: 'SET_CONTACTS', payload: response.data });
+    } catch (error) {
+      console.error('Error loading contacts:', error);
+    }
+  };
+
+  return { state, handleSearch, handleSort };
+};
+```
+
+1. useContacts menggunakan useReducer untuk mengelola state kompleks.
+2. handleSearch dan handleSort memperbarui state melalui dispatch.
+3. useEffect memicu loadContacts setiap kali search atau sortOrder berubah.
+4. loadContacts mengambil data dari API berdasarkan state saat ini.
+
+## Alur Proses Teknis:
+
+1. User mengetik keyword di search field atau mengklik tombol sort.
+   - `onChange` dan `onSort` di SearchBar dan SortButton dipanggil.
+   - `handleSearch` dan `handleSort` dari `useContacts` dipanggil.
+   - State search dan sortOrder diperbarui.
+
+2. MainPage bereaksi terhadap perubahan.
+   - `useEffect` mendeteksi perubahan search atau sortOrder.
+   - Memanggil `loadContacts` untuk memuat data baru.
+
+3. useContacts Hook mengelola state.
+   - `handleSearch` dan `handleSort` mengubah state di reducer.
+   - Data kontak diperbarui dan dirender ulang berdasarkan pencarian dan urutan yang baru.
+
+4. User dapat mengedit kontak di halaman utama.
+   - Klik tombol edit membuka form edit.
+   - Perubahan disimpan dan state diperbarui.
+
+# 11. Proses Fitur Searching Contact dan muncul data yang di searching berdasarkan keyword, setelah itu klik button 'add contact' dan muncul halaman add contact, selanjutnya, klik cancel dan kembali ke halaman sebelumnya yaitu halaman searching yang tadi
+
+## A. Proses Pencarian dan Tampilan Hasil
+
+**File: @frontend/src/components/SearchBar.js**
+```javascript
+const SearchBar = ({ value = '', onChange, onSort, onAdd }) => {
+  const handleSearchChange = (e) => {
+    const newValue = e.target.value;
+    onChange(newValue);
+  };
+
+  return (
+    <div className="search-bar">
+      <input
+        type="text"
+        value={value}
+        onChange={handleSearchChange}
+        placeholder="Search contacts..."
+        className="search-input"
+      />
+      <button onClick={onAdd} className="add-button">
+        Add Contact
+      </button>
+    </div>
+  );
+};
+```
+
+1. User mengetik keyword di field search
+2. `handleSearchChange` menangkap perubahan input
+3. Nilai search diteruskan ke MainPage melalui `onChange`
+
+## B. Penanganan State Pencarian
+
+**File: @frontend/src/components/MainPage.js**
+```javascript
+const MainPage = () => {
+  const navigate = useNavigate();
+  const {
+    state: { contacts, search },
+    handleSearch,
+  } = useContacts();
+
+  useEffect(() => {
+    // Menyimpan state pencarian ke session storage
+    if (search) {
+      sessionStorage.setItem('contactSearch', search);
+      sessionStorage.setItem('searchActive', 'true');
+    }
+  }, [search]);
+
+  const handleAddClick = () => {
+    navigate('/add');
+  };
+
+  return (
+    <div>
+      <SearchBar 
+        value={search}
+        onChange={handleSearch}
+        onAdd={handleAddClick}
+      />
+      <ContactList contacts={contacts} />
+    </div>
+  );
+};
+```
+
+1. `handleSearch` dari useContacts memperbarui state pencarian
+2. State pencarian disimpan ke sessionStorage
+3. Hasil pencarian ditampilkan melalui ContactList
+4. Tombol "Add Contact" mengarahkan ke halaman add
+
+## C. Navigasi ke Add Contact dan Kembali
+
+**File: @frontend/src/components/AddContact.js**
+```javascript
+const AddContact = ({ onAdd }) => {
+  const navigate = useNavigate();
+  
+  const handleCancel = () => {
+    // Mengambil state pencarian sebelumnya
+    const search = sessionStorage.getItem('contactSearch');
+    const isSearchActive = sessionStorage.getItem('searchActive');
+
+    // Kembali ke halaman utama dengan state pencarian
+    if (isSearchActive && search) {
+      navigate(`/?search=${search}`);
+    } else {
+      navigate('/');
+    }
+  };
+
+  return (
+    <form>
+      {/* Form fields */}
+      <button type="button" onClick={handleCancel}>
+        Cancel
+      </button>
+    </form>
+  );
+};
+```
+
+1. Saat tombol Cancel diklik, `handleCancel` dijalankan
+2. Mengambil state pencarian dari sessionStorage
+3. Navigasi kembali ke halaman utama dengan query search
+
+## Alur Proses Teknis:
+
+1. Inisiasi Pencarian:
+   - User mengetik keyword di SearchBar
+   - `handleSearchChange` menangkap input
+   - `onChange` meneruskan nilai ke MainPage
+   - `handleSearch` memperbarui state global
+   - State pencarian disimpan ke sessionStorage
+
+2. Tampilan Hasil Pencarian:
+   - useContacts memuat data sesuai keyword
+   - ContactList menampilkan hasil pencarian
+   - UI diperbarui secara real-time
+
+3. Navigasi ke Add Contact:
+   - User mengklik tombol "Add Contact"
+   - `handleAddClick` dipanggil
+   - navigate('/add') dijalankan
+   - Halaman add contact ditampilkan
+
+4. Kembali ke Hasil Pencarian:
+   - User mengklik tombol Cancel
+   - `handleCancel` mengambil state pencarian
+   - navigate dengan query search
+   - MainPage memulihkan state pencarian
+   - Hasil pencarian sebelumnya ditampilkan kembali
+
+Proses ini memastikan pengalaman pengguna yang mulus dengan mempertahankan state pencarian saat navigasi antar halaman.
+
+{{ ... }}
