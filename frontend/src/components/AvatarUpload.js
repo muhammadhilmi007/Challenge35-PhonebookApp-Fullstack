@@ -14,7 +14,7 @@ export default function AvatarUpload() {
   const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
-    async function getContact() {
+    const getContact = async () => {
       try {
         const contact = await api.getContactById(id);
         setAvatar(contact?.photo);
@@ -25,7 +25,7 @@ export default function AvatarUpload() {
     getContact();
   }, [id]);
 
-  function validateAndPreviewFile(file) {
+  const validateAndPreviewFile = (file) => {
     if (!file.type.startsWith('image/')) {
       setError('Please select an image file');
       return;
@@ -44,7 +44,7 @@ export default function AvatarUpload() {
     reader.readAsDataURL(file);
   }
 
-  async function uploadAvatar() {
+  const uploadAvatar = async () => {
     if (!preview) return;
 
     try {

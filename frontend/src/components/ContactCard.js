@@ -9,18 +9,18 @@ export default function ContactCard({ contact, onEdit, onDelete, onAvatarUpdate 
     phone: contact.phone
   });
 
-  async function saveChanges() {
+  const saveChanges = async () => {
     if (!form.name.trim() || !form.phone.trim()) return;
 
     try {
-      await onEdit(contact.id, form);
+      await onEdit(contact.id, form); // Memanggil handleEdit dengan data kontak baru yang ada di MainPage
       setIsEditing(false);
     } catch (err) {
       console.error('Failed to update:', err);
     }
   }
 
-  async function deleteContact() {
+  const deleteContact = async () => {
     try {
       await onDelete(contact.id);
       setShowDelete(false);
