@@ -2,37 +2,21 @@
 import React, { useEffect, useRef } from "react";
 import ContactCard from "./ContactCard";
 
-const ContactList = ({
-  contacts,
-  onEdit,
-  onDelete,
-  onAvatarUpdate,
-  onLoadMore,
-  hasMore,
-}) => {
-  const lastContactRef = useRef();
+export default function ContactList({ contacts, onEdit, onDelete, onAvatarUpdate, onLoadMore, hasMore }) {
+  const lastContact = useRef();
 
-  // 1.5 Setup Intersection Observer
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        // 1.6 Deteksi Scroll
-        if (entries[0].isIntersecting && hasMore) {
-          // 1.7 Trigger Load More
-          onLoadMore();
-        }
-      },
-      { threshold: 1 }
-    );
+    if (!lastContact.current) return;
 
-    // 1.8 Observe Last Contact
-    if (lastContactRef.current) {
-      observer.observe(lastContactRef.current);
-    }
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore) {
+        onLoadMore();
+      }
+    });
 
-    // 1.9 Cleanup
+    observer.observe(lastContact.current);
     return () => observer.disconnect();
-  }, [lastContactRef, hasMore, onLoadMore]);
+  }, [hasMore, onLoadMore]);
 
   if (!contacts.length) {
     return (
@@ -42,39 +26,21 @@ const ContactList = ({
     );
   }
 
-  // 1.10/3.12 Render Contact List
   return (
     <div className="contact-list">
-      {contacts.map((contact, index) => {
-        if (contacts.length === index + 1) {
-          return (
-            <div key={contact.id} ref={lastContactRef}>
-              <ContactCard
-                contact={contact}
-                onEdit={onEdit}
-                onDelete={onDelete}
-                onAvatarUpdate={onAvatarUpdate}
-              />
-            </div>
-          );
-        } else {
-          return (
-            <div key={contact.id}>
-              <ContactCard
-                contact={contact}
-                onEdit={onEdit}
-                onDelete={onDelete}
-                onAvatarUpdate={onAvatarUpdate}
-              />
-            </div>
-          );
-        }
-      })}
+      {contacts.map((contact, index) => (
+        <div key={contact.id} ref={index === contacts.length - 1 ? lastContact : null}>
+          <ContactCard
+            contact={contact}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onAvatarUpdate={onAvatarUpdate}
+          />
+        </div>
+      ))}
     </div>
   );
-};
-
-export default ContactList;
+}
 
 /*
 Alur Teknis Detail:

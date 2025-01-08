@@ -3,164 +3,187 @@ import SearchBar from "../components/SearchBar";
 import ContactList from "../components/ContactList";
 import { useNavigate, useLocation } from "react-router-dom";
 import { api } from "../services/api";
-import useContacts from "../hooks/useContacts";
 import "../styles/styles.css";
+import { useState } from "react";
 
-const MainPage = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
+const useContacts = () => {
+  // Basic states
+  const [contacts, setContacts] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
 
+  // Get saved preferences from session storage
+  const [search, setSearch] = useState(sessionStorage.getItem("contactSearch") || "");
+  const [sortBy, setSortBy] = useState(sessionStorage.getItem("contactSortBy") || "name");
+  const [sortOrder, setSortOrder] = useState(sessionStorage.getItem("contactSortOrder") || "asc");
+
+  // Load contacts from API
+  async function fetchContacts(isLoadMore = false) {
+    if (loading) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const currentPage = isLoadMore ? page + 1 : 1;
+      const response = await api.getContacts(currentPage, 10, sortBy, sortOrder, search);
+
+      if (!Array.isArray(response.phonebooks)) {
+        throw new Error("Invalid data from API");
+      }
+
+      if (isLoadMore) {
+        setContacts(old => [...old, ...response.phonebooks]);
+      } else {
+        setContacts(response.phonebooks);
+      }
+
+      setPage(currentPage);
+      setHasMore(response.phonebooks.length > 0 && currentPage < response.pages);
+    } catch (err) {
+      setError(err.message);
+      console.error("Failed to load contacts:", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Handle search
+  function updateSearch(value) {
+    setSearch(value);
+    sessionStorage.setItem("contactSearch", value);
+    resetAndReload();
+  }
+
+  // Handle sorting
+  function updateSort(field, order) {
+    sessionStorage.setItem("contactSortBy", field);
+    sessionStorage.setItem("contactSortOrder", order);
+    setSortBy(field);
+    setSortOrder(order);
+    resetAndReload();
+  }
+
+  // Reset pagination and reload contacts
+  function resetAndReload() {
+    setContacts([]);
+    setPage(1);
+    setHasMore(true);
+  }
+
+  // Load initial contacts
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const searchQuery = params.get("search");
-    const sortBy = params.get("sortBy");
-    const sortOrder = params.get("sortOrder");
+    fetchContacts();
+  }, [sortBy, sortOrder, search]); //eslint-disable-line
 
-    if (searchQuery) {
-      sessionStorage.setItem("contactSearch", searchQuery);
-      sessionStorage.setItem("searchActive", "true");
-    }
-    if (sortBy) {
-      sessionStorage.setItem("contactSortBy", sortBy);
-    }
-    if (sortOrder) {
-      sessionStorage.setItem("contactSortOrder", sortOrder);
-    }
-  }, [location.search]);
-
-  const {
+  return {
+    // States
     contacts,
     loading,
     error,
     hasMore,
     search,
-    setSearch,
-    setSortBy,
-    setSortOrder,
-    loadMore,
-    refreshContacts,
+    sortBy,
+    sortOrder,
+
+    // Actions
+    setSearch: updateSearch,
+    setSortBy: updateSort,
+    setSortOrder: order => updateSort(sortBy, order),
     setContacts,
+    loadMore: () => fetchContacts(true),
+    refreshContacts: () => fetchContacts()
+  };
+}
+
+const MainPage = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { 
+    contacts, loading, error, hasMore, search, 
+    setSearch, setSortBy, setSortOrder, loadMore, 
+    refreshContacts, setContacts 
   } = useContacts();
 
-  // Fungsi untuk menangani pencarian
-  const handleSearch = (value) => {
-    setSearch(value);
-    if (!value) {
-      sessionStorage.removeItem("contactSearch");
-    } else {
-      sessionStorage.setItem("contactSearch", value);
-      // Add flag to indicate this is not a browser refresh
-      sessionStorage.setItem("searchActive", "true");
-    }
-  };
-
-  // Effect untuk mendeteksi refresh browser
   useEffect(() => {
-    const handleBeforeUnload = () => {
+    const params = new URLSearchParams(location.search);
+    ["search", "sortBy", "sortOrder"].forEach(param => {
+      const value = params.get(param);
+      if (value) {
+        sessionStorage.setItem(`contact${param.charAt(0).toUpperCase() + param.slice(1)}`, value);
+        param === "search" && sessionStorage.setItem("searchActive", "true");
+      }
+    });
+  }, [location.search]);
+
+  useEffect(() => {
+    const cleanup = () => {
       sessionStorage.removeItem("contactSearch");
       sessionStorage.removeItem("searchActive");
     };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-    };
+    window.addEventListener("beforeunload", cleanup);
+    return () => window.removeEventListener("beforeunload", cleanup);
   }, []);
 
-  // Fungsi untuk menangani pengurutan
-  const handleSort = (field, order) => {
-    setSortBy(field);
-    setSortOrder(order);
+  const updateSearch = value => {
+    setSearch(value);
+    value ? sessionStorage.setItem("contactSearch", value) && sessionStorage.setItem("searchActive", "true")
+          : sessionStorage.removeItem("contactSearch");
   };
 
-  // Fungsi untuk navigasi ke halaman tambah kontak
-  const handleAdd = () => {
-    navigate("/add");
-  };
-
-  const handleEdit = async (id, updatedContact) => {
+  const editContact = async (id, updatedContact) => {
     try {
-      // 4.9 Memanggil API untuk memperbarui kontak
       await api.updateContact(id, updatedContact);
-
-      // !! Update Contact dalam mode search dan sort.
-      // Cek apakah sedang dalam mode pencarian
+      let newContacts = contacts.map(c => c.id === id ? { ...c, ...updatedContact } : c);
+      
       if (search) {
-        // Cek apakah kontak yang diupdate masih sesuai dengan kriteria pencarian
-        const searchLower = search.toLowerCase();
-        const isStillMatching =
-          updatedContact.name.toLowerCase().includes(searchLower) ||
-          updatedContact.phone.toLowerCase().includes(searchLower);
-
-        if (!isStillMatching) {
-          const updatedContacts = contacts.filter(
-            (contact) => contact.id !== id
-          );
-          // Jika tidak match, hapus dari daftar yang ditampilkan
-          setContacts(updatedContacts);
-          return;
-        }
+        const match = updatedContact.name.toLowerCase().includes(search.toLowerCase()) ||
+                     updatedContact.phone.toLowerCase().includes(search.toLowerCase());
+        if (!match) newContacts = contacts.filter(c => c.id !== id);
       }
-
-      // Jika tidak dalam mode pencarian atau masih match, update seperti biasa
-      const updatedContacts = contacts.map(
-        (
-          contact // 4.10 Memperbarui state contacts setelah edit berhasil
-        ) => (contact.id === id ? { ...contact, ...updatedContact } : contact)
-      );
-      // 4.11 Memperbarui UI dengan data terbaru
-      refreshContacts(updatedContacts);
-      setContacts(updatedContacts);
-    } catch (error) {
-      console.log("Error updating contact:", error);
+      
+      setContacts(newContacts);
+    } catch (e) {
+      console.error("Edit failed:", e);
     }
   };
 
-  // Fungsi untuk menghapus kontak
-  const handleDelete = async (id) => {
+  const deleteContact = async id => {
     try {
-      // Memanggil API untuk menghapus kontak
       await api.deleteContact(id);
-      const updatedContacts = contacts.filter((contact) => contact.id !== id);
-      // Merefresh daftar kontak setelah penghapusan
-      refreshContacts(updatedContacts);
-      setContacts(updatedContacts);
-    } catch (error) {
-      console.log("Error deleting contact:", error);
+      const newContacts = contacts.filter(c => c.id !== id);
+      refreshContacts(newContacts);
+      setContacts(newContacts);
+    } catch (e) {
+      console.error("Delete failed:", e);
     }
   };
 
-  // Fungsi untuk navigasi ke halaman update avatar
-  const handleAvatarUpdate = (id) => {
-    navigate(`/avatar/${id}`);
-  };
-
-  // Menampilkan pesan error jika terjadi kesalahan
   if (error) return <div className="error">Error: {error}</div>;
 
-  // Render komponen utama
   return (
     <div className="app">
       <SearchBar
         value={search}
-        onChange={handleSearch}
-        onSort={handleSort}
-        onAdd={handleAdd}
+        onChange={updateSearch}
+        onSort={(field, order) => { setSortBy(field); setSortOrder(order); }}
+        onAdd={() => navigate("/add")}
       />
-      {/* 1.4 Meneruskan data dan callback ke ContactList */}
       <ContactList
         contacts={contacts}
         loading={loading}
         error={error}
         hasMore={hasMore}
         onLoadMore={loadMore}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        onAvatarUpdate={handleAvatarUpdate}
+        onEdit={editContact}
+        onDelete={deleteContact}
+        onAvatarUpdate={id => navigate(`/avatar/${id}`)}
       />
       {loading && <p>Loading...</p>}
     </div>
   );
-};
+}
 
 export default MainPage;

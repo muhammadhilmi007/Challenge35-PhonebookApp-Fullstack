@@ -5,7 +5,7 @@ import { api } from '../services/api';
 
 // Definisikan komponen EditContact sebagai functional component
 // Menerima props: contact (data kontak yang akan diedit), onSave (fungsi callback setelah berhasil menyimpan), dan onCancel (fungsi callback untuk membatalkan)
-const EditContact = ({ contact, onSave, onCancel }) => {
+export default function EditContact({ contact, onSave, onCancel }) {
   // 4.3 Membuat form edit dengan data kontak yang ada dalam state
   const [form, setForm] = useState({
     name: contact.name,  // Inisialisasi dengan nama kontak yang ada
@@ -15,64 +15,53 @@ const EditContact = ({ contact, onSave, onCancel }) => {
   const [error, setError] = useState('');
 
   // Fungsi untuk menangani submit form
-  const handleSubmit = async (e) => {
+  async function saveContact(e) {
     // 4.5 Mencegah form submission default
     e.preventDefault(); // Mencegah reload halaman saat form disubmit
     
     // 4.6 Validasi: memastikan nama dan nomor telepon tidak kosong
     if (!form.name.trim() || !form.phone.trim()) {
-      setError('Nama dan nomor telepon harus diisi');
+      setError('Name and phone are required');
       return;
     }
 
     try {
       // 4.7 Memanggil API untuk memperbarui kontak
-      const updatedContact = await api.updateContact(contact.id, form);
-      onSave(updatedContact); // Memanggil fungsi callback onSave dengan data kontak yang telah diperbarui
+      const updated = await api.updateContact(contact.id, form);
+      onSave(updated); // Memanggil fungsi callback onSave dengan data kontak yang telah diperbarui
     } catch (err) {
       // 4.8 Menangani error jika terjadi kesalahan saat memperbarui kontak
-      setError(err.response?.data?.error || 'Gagal memperbarui kontak');
+      setError(err.response?.data?.error || 'Failed to update contact');
     }
-  };
-
-  // Fungsi untuk menangani perubahan input
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    // Memperbarui state form
-    setForm(prev => ({ ...prev, [name]: value }));
-    // Menghapus pesan error jika ada
-    if (error) setError('');
-  };
+  }
 
   // Render komponen
   return (
     <div className="edit-contact">
-      <h2>Edit Kontak</h2>
-      <form onSubmit={handleSubmit} className="edit-form">
+      <h2>Edit Contact</h2>
+      <form onSubmit={saveContact} className="edit-form">
         {/* Input untuk nama */}
         <div className="form-group">
-          <label htmlFor="name">Nama:</label>
+          <label htmlFor="name">Name:</label>
           <input
             type="text"
             id="name"
-            name="name"
             value={form.name}
-            onChange={handleChange}
-            placeholder="Masukkan nama"
+            onChange={e => setForm({ ...form, name: e.target.value })}
+            placeholder="Enter name"
             className={error && !form.name.trim() ? 'error' : ''}
           />
         </div>
 
         {/* Input untuk nomor telepon */}
         <div className="form-group">
-          <label htmlFor="phone">Telepon:</label>
+          <label htmlFor="phone">Phone:</label>
           <input
             type="tel"
             id="phone"
-            name="phone"
             value={form.phone}
-            onChange={handleChange}
-            placeholder="Masukkan nomor telepon"
+            onChange={e => setForm({ ...form, phone: e.target.value })}
+            placeholder="Enter phone number"
             className={error && !form.phone.trim() ? 'error' : ''}
           />
         </div>
@@ -83,20 +72,17 @@ const EditContact = ({ contact, onSave, onCancel }) => {
         {/* Tombol aksi */}
         <div className="form-actions">
           <button type="submit" className="save-button">
-            Simpan
+            Save
           </button>
           <button 
             type="button" 
             className="cancel-button"
             onClick={onCancel}
           >
-            Batal
+            Cancel
           </button>
         </div>
       </form>
     </div>
   );
-};
-
-// Export komponen EditContact sebagai default
-export default EditContact;
+}
