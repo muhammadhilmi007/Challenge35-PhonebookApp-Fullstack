@@ -1,5 +1,5 @@
 .app {
-  max-width: 1200px;
+  max-width: auto;
   margin: 0 auto;
   padding: 20px;
 }
@@ -437,44 +437,45 @@ font-weight: bold;
 }
 
 .contact-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 20px;
-  align-items: center;
   justify-content: center;
-  margin-top: 20px;
+  align-items: flex-start;
+  width: 100%;
+  padding: 10px 0;
 }
 
-.contact-list > *:last-child:nth-child(3n-2) {
-  grid-column: 2;
+.contact-list > * {
+  flex: 0 0 300px;
+  max-width: 300px;
+}
+
+@media (max-width: 575px) {
+  .contact-list > * {
+    flex-basis: 100%;
+    max-width: 100%;
+  }
+}
+
+@media (min-width: 768px) {
+  .contact-list > * {
+    flex-basis: calc(33.333% - 20px);
+    max-width: calc(33.333% - 20px);
+  }
 }
 
 @media (min-width: 992px) {
-  .contact-list {
-    grid-template-columns: repeat(3, minmax(300px, 1fr));
-    max-width: 1200px;
-    margin-left: auto;
-    margin-right: auto;
+  .contact-list > * {
+    flex-basis: calc(25% - 20px);
+    max-width: calc(25% - 20px);
   }
 }
 
-@media (min-width: 768px) and (max-width: 991px) {
-  .contact-list {
-    grid-template-columns: repeat(2, minmax(300px, 1fr));
-  }
-  
-  .contact-list > *:last-child:nth-child(2n-1) {
-    grid-column: 2;
-  }
-}
-
-@media (max-width: 767px) {
-  .contact-list {
-    grid-template-columns: minmax(300px, 1fr);
-  }
-  
-  .contact-list > *:last-child:nth-child(3n-2) {
-    grid-column: auto;
+@media (min-width: 1200px) {
+  .contact-list > * {
+    flex-basis: calc(20% - 20px);
+    max-width: calc(20% - 20px);
   }
 }
 

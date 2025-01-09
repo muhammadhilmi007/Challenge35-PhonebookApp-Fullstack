@@ -1,126 +1,194 @@
-import React, { useEffect } from "react";
+import React, { useReducer, useCallback, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import SearchBar from "./SearchBar";
 import ContactList from "./ContactList";
-import { useContacts } from "../hooks/useContacts";
-import {ACTIONS} from "../hooks/useContacts";
 import { api } from "../services/api";
+import { contactReducer, ACTIONS } from "../hooks/Reducer";
 
-const MainPage = () => {
+export default function MainPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const {
-    state: { contacts, loading, error, hasMore, search },
-    handleSearch,
-    handleSort,
-    loadContacts,
-    dispatch,
-  } = useContacts();
 
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const searchQuery = params.get("search");
-    const sortBy = params.get("sortBy");
-    const sortOrder = params.get("sortOrder");
+  // State setup
+  const [state, dispatch] = useReducer(contactReducer, {
+    contacts: [],
+    loading: false,
+    error: null,
+    page: 1,
+    hasMore: true,
+    sortBy: sessionStorage.getItem("contactSortBy") || "name",
+    sortOrder: sessionStorage.getItem("contactSortOrder") || "asc",
+    search: sessionStorage.getItem("searchActive")
+      ? sessionStorage.getItem("contactSearch") || ""
+      : "",
+  });
 
-    if (searchQuery) {
-      sessionStorage.setItem("contactSearch", searchQuery);
-      sessionStorage.setItem("searchActive", "true");
-    }
-    if (sortBy) {
-      sessionStorage.setItem("contactSortBy", sortBy);
-    }
-    if (sortOrder) {
-      sessionStorage.setItem("contactSortOrder", sortOrder);
-    }
-  }, [location.search]);
+  // Load contacts from API
+  const loadContacts = useCallback(
+    async (loadMore = false) => {
+      if (state.loading) return;
 
-  const handleEdit = async (id, updatedContact) => {
-    try {
-      await api.updateContact(id, updatedContact);
+      dispatch({ type: ACTIONS.SET_LOADING, payload: true });
 
-      if (search) {
-        const searchLower = search.toLowerCase();
-        const isStillMatching =
-          updatedContact.name.toLowerCase().includes(searchLower) ||
-          updatedContact.phone.toLowerCase().includes(searchLower);
+      try {
+        const page = loadMore ? state.page + 1 : 1;
+        const response = await api.getContacts(
+          page,
+          10,
+          state.sortBy,
+          state.sortOrder,
+          state.search
+        );
 
-        if (!isStillMatching) {
-          const filteredContacts = contacts.filter(
-            (contact) => contact.id !== id
-          );
-          dispatch({ type: ACTIONS.SET_CONTACTS, payload: filteredContacts });
-          return;
+        if (Array.isArray(response.phonebooks)) {
+          if (loadMore) {
+            dispatch({
+              type: ACTIONS.ADD_MORE_CONTACTS,
+              payload: response.phonebooks,
+            });
+          } else {
+            dispatch({
+              type: ACTIONS.SET_CONTACTS,
+              payload: response.phonebooks,
+            });
+          }
+
+          dispatch({
+            type: ACTIONS.SET_HAS_MORE,
+            payload: page < response.pages,
+          });
+          dispatch({ type: ACTIONS.SET_PAGE, payload: page });
         }
+      } catch (err) {
+        dispatch({ type: ACTIONS.SET_ERROR, payload: err.message });
+        console.error("Failed to load contacts:", err);
       }
 
-      const updatedContacts = contacts.map((contact) =>
-        contact.id === id ? { ...contact, ...updatedContact } : contact
-      );
-      dispatch({ type: ACTIONS.SET_CONTACTS, payload: updatedContacts });
-      loadContacts(false);
-    } catch (error) {
-      console.error("Error updating contact:", error);
-    }
-  };
+      dispatch({ type: ACTIONS.SET_LOADING, payload: false });
+    },
+    [state.loading, state.page, state.sortBy, state.sortOrder, state.search]
+  );
 
-  const handleDelete = async (id) => {
-    if (!id) {
-      console.error("No contact ID provided for deletion");
-      return;
-    }
-
-    try {
-      await api.deleteContact(id);
-      loadContacts(false);
-    } catch (error) {
-      console.error("Error deleting contact:", error);
-    }
-  };
-
-  const handleAvatarUpdate = (id) => {
-    navigate(`/avatar/${id}`);
-  };
-
-  const handleAddClick = () => {
-    navigate("/add");
-  };
-
-  useEffect(() => {
-    const handleBeforeUnload = () => {
+  // Handle search
+  const handleSearch = useCallback((value) => {
+    dispatch({ type: ACTIONS.UPDATE_SEARCH, payload: value });
+    if (value) {
+      sessionStorage.setItem("contactSearch", value);
+      sessionStorage.setItem("searchActive", "true");
+    } else {
       sessionStorage.removeItem("contactSearch");
       sessionStorage.removeItem("searchActive");
-    };
+    }
+  }, []);
 
-    window.addEventListener("beforeunload", handleBeforeUnload);
+  // Handle sort
+  const handleSort = useCallback((field, order) => {
+    sessionStorage.setItem("contactSortBy", field);
+    sessionStorage.setItem("contactSortOrder", order);
+    dispatch({
+      type: ACTIONS.UPDATE_SORT,
+      payload: { sortBy: field, sortOrder: order },
+    });
+  }, []);
+
+  // Edit Contact
+  const handleEdit = useCallback(
+    async (id, updatedContact) => {
+      try {
+        await api.updateContact(id, updatedContact);
+        let newContacts = state.contacts.map((contact) =>
+          contact.id === id ? updatedContact : contact
+        );
+
+        if (state.search) {
+          const match =
+            updatedContact.name
+              .toLowerCase()
+              .includes(state.search.toLowerCase()) ||
+            updatedContact.phone
+              .toLowerCase()
+              .includes(state.search.toLowerCase());
+          if (!match) {
+            newContacts = state.contacts.filter((contact) => contact.id !== id);
+            dispatch({ type: ACTIONS.SET_CONTACTS, payload: newContacts });
+          }
+        }
+        dispatch({ type: ACTIONS.SET_CONTACTS, payload: newContacts });
+      } catch (error) {
+        dispatch({ type: ACTIONS.SET_ERROR, payload: error.message });
+        console.error("Failed to update contact:", error);
+      }
+    },
+    [state.contacts, state.search]
+  );
+
+  const handleDelete = useCallback(async (id) => {
+    try {
+      await api.deleteContact(id);
+      dispatch({ type: ACTIONS.DELETE_CONTACT, payload: id });
+    } catch (error) {
+      dispatch({ type: ACTIONS.SET_ERROR, payload: error.message });
+      console.error("Failed to delete contact:", error);
+    }
+    dispatch({ type: ACTIONS.SET_CONTACTS, payload: state.contacts.filter((contact) => contact.id !== id) });
+  }, [state.contacts]);
+
+  // Load contacts when sort or search changes
+  useEffect(() => {
+    dispatch({ type: ACTIONS.CLEAR_CONTACTS });
+    loadContacts(false);
+  }, [state.sortBy, state.sortOrder, state.search]); // eslint-disable-line
+
+  // Handle URL parameters
+  useEffect(() => {
+
+    const params = new URLSearchParams(location.search);
+    ["search", "sortBy", "sortOrder"].forEach((param) => {
+      const value = params.get(param);
+      if (value) {
+        sessionStorage.setItem(`contact${param[0].toUpperCase() + param.slice(1)}`, value);
+
+        if (param === "search") {
+          sessionStorage.setItem("searchActive", "true");
+        }
+      }
+    });
+  }, [location.search]);
+
+  // Clear Search on Page unload
+  useEffect(() => {
+    const cleanup = () => {
+      sessionStorage.removeItem("searchActive");
+      sessionStorage.removeItem("contactSearch");
+    };
+    window.addEventListener("beforeunload", cleanup);
     return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("beforeunload", cleanup);
     };
   }, []);
 
-  if (error) return <div className="error">Error: {error}</div>;
+  if (state.error) {
+    return <div className="error">Error: {state.error}</div>;
+  }
 
   return (
     <div className="app">
       <SearchBar
-        value={search}
+        value={state.search}
         onChange={handleSearch}
         onSort={handleSort}
-        onAdd={handleAddClick}
+        onAdd={() => navigate("/add")}
       />
       <ContactList
-        contacts={contacts}
-        loading={loading}
-        error={error}
-        hasMore={hasMore}
+        contacts={state.contacts}
+        loading={state.loading}
+        hasMore={state.hasMore}
         onLoadMore={() => loadContacts(true)}
         onEdit={handleEdit}
         onDelete={handleDelete}
-        onAvatarUpdate={handleAvatarUpdate}
+        onAvatarUpdate={(id) => navigate(`/avatar/${id}`)}
       />
-      {loading && <div className="loading">Loading...</div>}
+      {state.loading && <div className="loading">Loading...</div>}
     </div>
   );
-};
-
-export default MainPage;
+}
