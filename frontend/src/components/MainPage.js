@@ -27,6 +27,9 @@ export default function MainPage() {
     sessionStorage.getItem("contactSortOrder") || "asc"
   );
 
+  // States for online/offline
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
   // Load contacts from API
   const fetchContacts = async (isLoadMore = false) => {
     if (loading) return;
@@ -38,29 +41,31 @@ export default function MainPage() {
       const currentPage = isLoadMore ? page + 1 : 1;
       const response = await api.getContacts(
         currentPage,
-        10,
+        navigator.onLine ? 10 : Number.MAX_SAFE_INTEGER, // No limit when offline
         sortBy,
         sortOrder,
         search
       );
 
-      if (!Array.isArray(response.phonebooks)) {
+      const contactsData = response.data || [];
+      if (!Array.isArray(contactsData)) {
         throw new Error("Invalid data from API");
       }
 
       if (isLoadMore) {
-        setContacts((old) => [...old, ...response.phonebooks]);
+        setContacts((old) => [...old, ...contactsData]);
       } else {
-        setContacts(response.phonebooks);
+        setContacts(contactsData);
       }
 
       setPage(currentPage);
-      setHasMore(
-        response.phonebooks.length > 0 && currentPage < response.pages
-      );
+      // Only enable infinite scroll when online
+      setHasMore(navigator.onLine && contactsData.length > 0 && currentPage < response.totalPages);
     } catch (err) {
       setError(err.message);
       console.error("Failed to load contacts:", err);
+      setContacts([]);
+      setHasMore(false);
     } finally {
       setLoading(false);
     }
@@ -97,7 +102,6 @@ export default function MainPage() {
 
   // Edit contact
   const editContact = async (id, updatedContact) => {
-    // Menerima data form (onEdit) baru dari EditContact
     try {
       await api.updateContact(id, updatedContact);
       let newContacts = contacts.map((contact) =>
@@ -135,16 +139,59 @@ Jika tidak ada kecocokan (!match), maka newContacts akan diperbarui untuk mengha
   const deleteContact = async (id) => {
     try {
       await api.deleteContact(id);
-      setContacts(contacts.filter((contact) => contact.id !== id));
+      // Refresh the contacts list
+      fetchContacts();
     } catch (err) {
       console.error("Failed to delete contact:", err);
     }
   };
 
+  // Handle resend
+  const handleResend = async (pendingContact) => {
+    try {
+      setLoading(true);
+      const response = await api.resendContact(pendingContact);
+      if (response) {
+        // Refresh the contact list
+        fetchContacts();
+      }
+    } catch (error) {
+      // Show user-friendly error message
+      if (error.message.includes('Server sedang tidak aktif')) {
+        alert('Server sedang tidak aktif. Silakan coba lagi nanti setelah server aktif kembali.');
+      } else {
+        alert('Gagal mengirim ulang kontak. Silakan coba lagi.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle online/offline state
+  useEffect(() => {
+    const handleOnlineStatus = () => {
+      const isOnline = navigator.onLine;
+      setIsOnline(isOnline);
+      // Refresh contacts when coming back online
+      if (isOnline) {
+        setPage(1);
+        fetchContacts();
+      }
+    };
+
+    window.addEventListener("online", handleOnlineStatus);
+    window.addEventListener("offline", handleOnlineStatus);
+
+    return () => {
+      window.removeEventListener("online", handleOnlineStatus);
+      window.removeEventListener("offline", handleOnlineStatus);
+    };
+  }, []); // eslint-disable-line
+
   // Load initial contacts
   useEffect(() => {
     fetchContacts();
-  }, [sortBy, sortOrder, search]); // eslint-disable-line
+  }, [sortBy, sortOrder, search, isOnline]); // eslint-disable-line
 
   // Handle URL parameters
   useEffect(() => {
@@ -194,8 +241,10 @@ Jika tidak ada kecocokan (!match), maka newContacts akan diperbarui untuk mengha
         onEdit={editContact}
         onDelete={deleteContact}
         onAvatarUpdate={(id) => navigate(`/avatar/${id}`)}
+        onResend={handleResend}
       />
       {loading && <p>Loading...</p>}
+      {!isOnline && <p>You are currently offline.</p>}
     </div>
   );
 }

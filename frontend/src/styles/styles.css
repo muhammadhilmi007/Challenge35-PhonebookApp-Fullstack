@@ -814,3 +814,34 @@ body {
   background-color: #fff8e8;
   border: 1px dashed #ffa500;
 }
+
+.pending-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: #ffd700;
+  color: #000;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.8em;
+}
+
+.contact-list-item.pending {
+  background-color: rgba(255, 215, 0, 0.1);
+  border: 3px solid #ffd700;
+  border-radius: 15px;
+}
+
+.contact-actions button[aria-label="Resend contact"] {
+  font-size: 1.3em;
+}
+
+/* Resend button specific styles */
+.contact-actions button[aria-label="Resend contact"] {
+  color: #ffa500;
+}
+
+.contact-actions button[aria-label="Resend contact"]:hover {
+  color: #128800;
+}
+

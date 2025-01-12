@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { BsPencilSquare, BsTrash } from 'react-icons/bs';
+import { BsPencilSquare, BsTrash, BsArrowRepeat } from 'react-icons/bs';
 
-export default function ContactCard({ contact, onEdit, onDelete, onAvatarUpdate }) {
+export default function ContactCard({ contact, onEdit, onDelete, onAvatarUpdate, onResend }) {
   const [isEditing, setIsEditing] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
   const [form, setForm] = useState({
@@ -70,11 +70,18 @@ export default function ContactCard({ contact, onEdit, onDelete, onAvatarUpdate 
         <div className="contact-details">
           <h3>{contact.name}</h3>
           <p>{contact.phone}</p>
+          {contact.status === 'pending' && <span className="pending-badge">Pending</span>}
         </div>
         <div className="contact-actions">
-          <button onClick={() => setIsEditing(true)} aria-label="Edit contact">
-            <BsPencilSquare />
-          </button>
+          {contact.status === 'pending' ? (
+            <button onClick={() => onResend(contact)} aria-label="Resend contact">
+              <BsArrowRepeat />
+            </button>
+          ) : (
+            <button onClick={() => setIsEditing(true)} aria-label="Edit contact">
+              <BsPencilSquare />
+            </button>
+          )}
           <button onClick={() => setShowDelete(true)} aria-label="Delete contact">
             <BsTrash />
           </button>
@@ -84,7 +91,7 @@ export default function ContactCard({ contact, onEdit, onDelete, onAvatarUpdate 
       {showDelete && (
         <div className="modal-overlay">
           <div className="confirm-dialog">
-            <p>Delete this contact?</p>
+            <p>Are you sure you want to delete this contact?</p>
             <div className="confirm-buttons">
               <button onClick={deleteContact}>Yes</button>
               <button onClick={() => setShowDelete(false)}>No</button>
