@@ -1,7 +1,8 @@
-Challenge #35 (Aplikasi Phonebook)
+Challenge #35 (Aplikasi Phonebook Progressive Web App)
 -------------------
-Di tantangan kali ini, kita akan membuat daftar phonebook, untuk menyimpan nama dan nomor telepon serta foto orangnya. aplikasi ini memiliki fitur BREADS (Browse, Read, Edit, Add, Delete,
-Sorting) serta dilengkapi pagination. disini kita akan membuat backend serta frontend yang dilengkapi test unit menggunakan mocha dan chai.
+Di tantangan kali ini, kita akan membuat aplikasi (PWA) daftar phonebook, untuk menyimpan nama dan nomor telepon serta foto orangnya. aplikasi ini memiliki fitur BREADS (Browse, Read, Edit, Add, Delete,
+Sorting) serta dilengkapi pagination. disini kita akan membuat backend serta frontend yang dilengkapi test unit menggunakan mocha dan chai untuk backend dan jest
+atau framework test lain yang kamu kuasai untuk frontend.
 
 Resful API
 -------------
@@ -125,21 +126,22 @@ terdiri dari :
 2. Searching Input
 3. Adding Button
 4. List
+5. Resend Fitur
 
 Web View
 -------------
 [Gambar Web View]
-untuk tampilang web view, yang biasanya terlihat di browser kalau dibuka di monitor yang resolusinya cukup lebar.
+untuk tampilang web view, yang biasanya terlihat di browser kalau dibuka di monitor yang resolusinya cukup lebar dengan menggunakan resolusi minimal 1024px dan maksimal resolusi 1920px dan menggunakan layout responsive flex.
 
 Tab View
 -------------
 [Gambar Tab View]
-untuk tampilang tab view, yang biasanya terlihat di sebuah layar pada device tab.
+untuk tampilang tab view, yang biasanya terlihat di sebuah layar pada device tab dengan menggunakan resolusi minimal 1024px dan maksimal resolusi 1920px dan menggunakan layout responsive flex.
 
 Mobile View
 -------------
 [Gambar Mobile View]
-untuk tampilang mobile view, yang biasanya terlihat di sebuah layar pada device smartphone dengan maksimal resolusi 600px.
+untuk tampilang mobile view, yang biasanya terlihat di sebuah layar pada device smartphone dengan maksimal resolusi 600px dan menggunakan layout responsive flex.
 
 Searching Mode  
 -------------
@@ -160,6 +162,10 @@ Adding View
 -------------
 [Gambar Adding Mode]
 Fitur Add View akan muncul ketika tombol add yang ada di landing page sebelah searching input diklik, maka tampilan landing page akan berpindah ke tampilan add-view. gunakan Router di Frontend untuk mengatur perpindahan halaman. dan apabila user menekan tombol save maka data akan tersimpan dan tampilan akan kembali ke landing page.
+
+Fitur Resend
+-------------
+Fitur Resend dapat dilakukan ketika server dimatikan (PWA), yang mana ketika tampilan landing page muncul, server di matikan, dan user mengklik tombol add contact, dan muncul halaman add contact, terus buat contact baru dan user mengklik button save, maka data yang baru tersebut muncul di halaman landing page dengan di simpan sementara di local storage dan pada data baru tersebut karena server mati, maka keluar button resend, dan ketika di klik button resend, ada alert bahwa server mati, dan ketika server dijalankan kembali, maka user mengklik button resend, dan data baru tersebut masuk ke database serta menghapus data sementara dari cache dan data button resend berganti menjadi button edit seperti semula.
 
 Editing View
 -------------
@@ -182,6 +188,19 @@ Buatlah beberapa test unit dengan menggunakan mocha dan chai untuk bagian backen
 
 Keywords Tech Stack
 -------------
+1. Backend (Express Generator, Sequelize, Postgresql, Node JS, Nodemon, CORS, Dotenv, Multer, Mocha Chai)
+2. FrontEnd (React JS (Create-react-App), react-router, react-icons, react-intersection-observer, react-dom, react-scripts, axios)
+
+## yang harus diperbaiki
+1. Button Sort nya kebalik
+2. Ketika Search data, dan terus edit data, maka data yang di edit tidak ada di list
+3. Ketika Search data, dan klik button add data, maka keyword yang di form search tidak hilang
+4. Ketika user klik update avatar, maka pindah ke halaman updateavatar
+5. Ketika Search keyword: 'bo', kenapa muncul selain bo dan harus di produce.
+6. Ketika update gambar, maka gambar yang sebelumnya terhapus juga di folder upload nya
+
+Keywords Tech Stack
+-------------
 1. Backend
 2. Sequelize
 3. Frontend
@@ -195,12 +214,10 @@ Keywords Tech Stack
 11. Jest
 12. Database PostgreSQL
 
-
-
-## Error
-1. Button Sort nya kebalik (solved)
-2. Ketika Search data, dan terus edit data, maka data yang di edit tidak ada di list (solved)
-3. Ketika Search data, dan klik button add data, maka keyword yang di form search tidak hilang (solved)
+## yang harus diperbaiki
+1. Button Sort nya kebalik
+2. Ketika Search data, dan terus edit data, maka data yang di edit tidak ada di list
+3. Ketika Search data, dan klik button add data, maka keyword yang di form search tidak hilang
 4. Ketika user klik update avatar, maka pindah ke halaman updateavatar
 5. Ketika Search keyword: 'bo', kenapa muncul selain bo dan harus di produce.
 6. Ketika update gambar, maka gambar yang sebelumnya terhapus juga di folder upload nya
