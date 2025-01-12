@@ -5,18 +5,36 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { api } from "../services/api";
 import "../styles/styles.css";
 
+/**
+ * MainPage Component
+ * 
+ * Komponen utama untuk menampilkan dan mengelola daftar kontak.
+ * Menyediakan fitur:
+ * - Pencarian kontak
+ * - Pengurutan kontak
+ * - Penambahan kontak baru
+ * - Edit dan hapus kontak
+ * - Dukungan mode offline
+ * - Infinite scroll untuk memuat lebih banyak kontak
+ */
 export default function MainPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // States for contacts and pagination
-  const [contacts, setContacts] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
+  // ==================== State Management ====================
+  
+  /**
+   * States untuk mengelola daftar kontak dan pagination
+   */
+  const [contacts, setContacts] = useState([]); // Daftar kontak
+  const [loading, setLoading] = useState(false); // Status loading
+  const [error, setError] = useState(null); // Pesan error jika ada
+  const [page, setPage] = useState(1); // Halaman saat ini
+  const [hasMore, setHasMore] = useState(true); // Masih ada data yang bisa dimuat
 
-  // States for search and sorting
+  /**
+   * States untuk pencarian dan pengurutan
+   */
   const [search, setSearch] = useState(
     sessionStorage.getItem("contactSearch") || ""
   );
@@ -27,10 +45,17 @@ export default function MainPage() {
     sessionStorage.getItem("contactSortOrder") || "asc"
   );
 
-  // States for online/offline
+  /**
+   * State untuk status online/offline
+   */
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
-  // Load contacts from API
+  // ==================== Data Fetching ====================
+
+  /**
+   * Mengambil data kontak dari API
+   * @param {boolean} isLoadMore - True jika memuat lebih banyak data (infinite scroll)
+   */
   const fetchContacts = async (isLoadMore = false) => {
     if (loading) return;
 
@@ -41,7 +66,7 @@ export default function MainPage() {
       const currentPage = isLoadMore ? page + 1 : 1;
       const response = await api.getContacts(
         currentPage,
-        navigator.onLine ? 10 : Number.MAX_SAFE_INTEGER, // No limit when offline
+        navigator.onLine ? 10 : Number.MAX_SAFE_INTEGER,
         sortBy,
         sortOrder,
         search
@@ -52,14 +77,8 @@ export default function MainPage() {
         throw new Error("Invalid data from API");
       }
 
-      if (isLoadMore) {
-        setContacts((old) => [...old, ...contactsData]);
-      } else {
-        setContacts(contactsData);
-      }
-
+      setContacts((old) => isLoadMore ? [...old, ...contactsData] : contactsData);
       setPage(currentPage);
-      // Only enable infinite scroll when online
       setHasMore(navigator.onLine && contactsData.length > 0 && currentPage < response.totalPages);
     } catch (err) {
       setError(err.message);
@@ -71,7 +90,12 @@ export default function MainPage() {
     }
   };
 
-  // Handle search
+  // ==================== Event Handlers ====================
+
+  /**
+   * Menangani perubahan pada pencarian
+   * @param {string} value - Kata kunci pencarian
+   */
   const updateSearch = (value) => {
     setSearch(value);
     if (value) {
@@ -84,7 +108,11 @@ export default function MainPage() {
     resetAndReload();
   };
 
-  // Handle sorting
+  /**
+   * Menangani perubahan pengurutan
+   * @param {string} field - Field untuk pengurutan (name/phone)
+   * @param {string} order - Urutan pengurutan (asc/desc)
+   */
   const updateSort = (field, order) => {
     setSortBy(field);
     setSortOrder(order);
@@ -93,27 +121,30 @@ export default function MainPage() {
     resetAndReload();
   };
 
-  // Reset and reload contacts
+  /**
+   * Reset state dan memuat ulang kontak
+   */
   const resetAndReload = () => {
     setContacts([]);
     setPage(1);
     setHasMore(true);
   };
 
-  // Edit contact
+  // ==================== CRUD Operations ====================
+
+  /**
+   * Mengedit kontak yang ada
+   * @param {string} id - ID kontak yang akan diedit
+   * @param {Object} updatedContact - Data kontak yang diperbarui
+   */
   const editContact = async (id, updatedContact) => {
     try {
       await api.updateContact(id, updatedContact);
       let newContacts = contacts.map((contact) =>
         contact.id === id ? { ...contact, ...updatedContact } : contact
       );
-      /*
-        Mengubah Kontak yang Diperbarui:
-Kode ini membuat array baru bernama newContacts dengan menggunakan metode map pada array contacts.
-Untuk setiap contact dalam contacts, jika contact.id sama dengan id yang diberikan (yang menunjukkan kontak yang sedang diedit), maka objek kontak tersebut akan diperbarui dengan data baru dari updatedContact. Ini dilakukan dengan menggunakan spread operator (...) untuk menggabungkan properti dari contact yang ada dengan properti dari updatedContact.
-Jika contact.id tidak sama dengan id, maka kontak tersebut akan tetap tidak berubah.
-      */
 
+      // Filter kontak jika tidak sesuai dengan pencarian
       if (search) {
         const match =
           updatedContact.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -123,40 +154,37 @@ Jika contact.id tidak sama dengan id, maka kontak tersebut akan tetap tidak beru
         }
       }
 
-      /*
-        Pencarian dan Filter:
-Jika ada nilai search (misalnya, kata kunci pencarian yang dimasukkan pengguna), kode ini akan memeriksa apakah nama atau nomor telepon dari updatedContact mengandung kata kunci pencarian tersebut.
-Jika tidak ada kecocokan (!match), maka newContacts akan diperbarui untuk menghapus kontak yang baru saja diedit (dengan id yang sama). Ini dilakukan dengan menggunakan metode filter untuk membuat array baru yang hanya berisi kontak yang tidak memiliki id yang sama dengan kontak yang baru saja diedit.
-      */
-
       setContacts(newContacts);
     } catch (err) {
       console.error("Failed to edit contact:", err);
     }
   };
 
-  // Delete contact
+  /**
+   * Menghapus kontak
+   * @param {string} id - ID kontak yang akan dihapus
+   */
   const deleteContact = async (id) => {
     try {
       await api.deleteContact(id);
-      // Refresh the contacts list
       fetchContacts();
     } catch (err) {
       console.error("Failed to delete contact:", err);
     }
   };
 
-  // Handle resend
+  /**
+   * Mengirim ulang kontak yang pending
+   * @param {Object} pendingContact - Kontak yang akan dikirim ulang
+   */
   const handleResend = async (pendingContact) => {
     try {
       setLoading(true);
       const response = await api.resendContact(pendingContact);
       if (response) {
-        // Refresh the contact list
         fetchContacts();
       }
     } catch (error) {
-      // Show user-friendly error message
       if (error.message.includes('Server sedang tidak aktif')) {
         alert('Server sedang tidak aktif. Silakan coba lagi nanti setelah server aktif kembali.');
       } else {
@@ -167,12 +195,15 @@ Jika tidak ada kecocokan (!match), maka newContacts akan diperbarui untuk mengha
     }
   };
 
-  // Handle online/offline state
+  // ==================== Effects ====================
+
+  /**
+   * Effect untuk menangani status online/offline
+   */
   useEffect(() => {
     const handleOnlineStatus = () => {
       const isOnline = navigator.onLine;
       setIsOnline(isOnline);
-      // Refresh contacts when coming back online
       if (isOnline) {
         setPage(1);
         fetchContacts();
@@ -188,12 +219,16 @@ Jika tidak ada kecocokan (!match), maka newContacts akan diperbarui untuk mengha
     };
   }, []); // eslint-disable-line
 
-  // Load initial contacts
+  /**
+   * Effect untuk memuat kontak awal
+   */
   useEffect(() => {
     fetchContacts();
   }, [sortBy, sortOrder, search, isOnline]); // eslint-disable-line
 
-  // Handle URL parameters
+  /**
+   * Effect untuk menangani parameter URL
+   */
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     ["search", "sortBy", "sortOrder"].forEach((param) => {
@@ -210,7 +245,9 @@ Jika tidak ada kecocokan (!match), maka newContacts akan diperbarui untuk mengha
     });
   }, [location.search]);
 
-  // Clear search on page unload
+  /**
+   * Effect untuk membersihkan pencarian saat halaman ditutup
+   */
   useEffect(() => {
     const cleanup = () => {
       sessionStorage.removeItem("contactSearch");
@@ -219,6 +256,8 @@ Jika tidak ada kecocokan (!match), maka newContacts akan diperbarui untuk mengha
     window.addEventListener("beforeunload", cleanup);
     return () => window.removeEventListener("beforeunload", cleanup);
   }, []);
+
+  // ==================== Render ====================
 
   if (error) {
     return <div className="error">Error: {error}</div>;

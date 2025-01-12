@@ -1,13 +1,17 @@
 import axios from 'axios';
 import { localStorageUtil } from '../utils/localStorage';
 
-// URL dasar API
+/**
+ * Konfigurasi API
+ */
 const API_URL = 'http://localhost:3001/api';
 
-// Check if server is online with timeout
+/**
+ * Memeriksa status server dengan timeout
+ * @returns {Promise<boolean>} Status server (online/offline)
+ */
 const checkServerStatus = async () => {
   try {
-    // Set a timeout of 5 seconds for the health check
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
 
@@ -26,72 +30,56 @@ const checkServerStatus = async () => {
   }
 };
 
-// Objek api untuk interaksi dengan backend
+/**
+ * API Service untuk mengelola kontak
+ * Menyediakan fungsi-fungsi untuk:
+ * - Mengambil daftar kontak
+ * - Menambah kontak baru
+ * - Mengupdate kontak
+ * - Menghapus kontak
+ * - Mengupdate avatar
+ * 
+ * Mendukung mode offline dengan menyimpan data di localStorage
+ */
 export const api = {
-  // Mengambil daftar kontak
+  /**
+   * Mengambil daftar kontak dari server atau localStorage
+   * @param {number} page - Halaman yang diminta
+   * @param {number} limit - Jumlah item per halaman
+   * @param {string} sortBy - Field untuk pengurutan (name/phone)
+   * @param {string} sortOrder - Urutan pengurutan (asc/desc)
+   * @param {string} search - Kata kunci pencarian
+   * @returns {Promise<Object>} Data kontak dan informasi pagination
+   */
   getContacts: async (page = 1, limit = 5, sortBy = 'name', sortOrder = 'asc', search = '') => {
     try {
       const isOnline = await checkServerStatus();
       
       if (!isOnline) {
         console.log('Server offline, using local storage');
-        // Get all contacts from local storage
-        const offlineContacts = localStorageUtil.getAllContacts();
-        const pendingContacts = localStorageUtil.getPendingContacts();
-        
-        // Combine and sort contacts
-        let allContacts = [...pendingContacts, ...offlineContacts];
-        
-        // Apply search filter if needed
-        if (search) {
-          allContacts = allContacts.filter(contact => 
-            contact.name.toLowerCase().includes(search.toLowerCase()) ||
-            contact.phone.toLowerCase().includes(search.toLowerCase())
-          );
-        }
-        
-        // Apply sorting
-        allContacts.sort((a, b) => {
-          const aValue = a[sortBy]?.toLowerCase() || '';
-          const bValue = b[sortBy]?.toLowerCase() || '';
-          return sortOrder === 'asc' ? 
-            aValue.localeCompare(bValue) : 
-            bValue.localeCompare(aValue);
-        });
-
-        // Return all contacts without pagination in offline mode
-        return {
-          data: allContacts,
-          total: allContacts.length,
-          page: 1,
-          totalPages: 1
-        };
+        return api.getOfflineContacts(search, sortBy, sortOrder);
       }
 
-      // If online, get from server with pagination
+      // Jika online, ambil dari server dengan pagination
       const response = await axios.get(`${API_URL}/phonebooks`, {
         params: { 
           page, 
-          limit: Math.min(limit, 100), // Ensure we don't request too many at once
+          limit: Math.min(limit, 100),
           sortBy, 
           sortOrder, 
           name: search 
         }
       });
       
+      // Gabungkan kontak dari server dengan kontak pending
       const serverContacts = response.data.phonebooks || [];
       const pendingContacts = localStorageUtil.getPendingContacts();
       
-      // Save all server contacts to local storage
-      const existingContacts = localStorageUtil.getAllContacts();
-      const newServerContacts = serverContacts.filter(newContact => 
-        !existingContacts.some(existingContact => existingContact.id === newContact.id)
-      );
-      localStorageUtil.saveAllContacts([...existingContacts, ...newServerContacts]);
+      // Simpan kontak server ke localStorage
+      api.syncServerContactsToLocal(serverContacts);
       
-      // Combine pending and server contacts
+      // Gabungkan dan kembalikan hasil
       const combinedContacts = [...pendingContacts, ...serverContacts];
-      
       return {
         data: combinedContacts,
         total: response.data.total + pendingContacts.length,
@@ -100,41 +88,82 @@ export const api = {
       };
     } catch (error) {
       console.error('Gagal mengambil kontak:', error);
-      // If error, return all contacts from local storage
-      const offlineContacts = localStorageUtil.getAllContacts();
-      const pendingContacts = localStorageUtil.getPendingContacts();
-      const allContacts = [...pendingContacts, ...offlineContacts];
-      
-      return {
-        data: allContacts,
-        total: allContacts.length,
-        page: 1,
-        totalPages: 1
-      };
+      return api.getOfflineContacts(search, sortBy, sortOrder);
     }
   },
 
-  // Menambah kontak baru
+  /**
+   * Mendapatkan kontak dalam mode offline
+   * @private
+   */
+  getOfflineContacts: (search, sortBy, sortOrder) => {
+    const offlineContacts = localStorageUtil.getAllContacts();
+    const pendingContacts = localStorageUtil.getPendingContacts();
+    let allContacts = [...pendingContacts, ...offlineContacts];
+    
+    // Terapkan filter pencarian
+    if (search) {
+      allContacts = allContacts.filter(contact => 
+        contact.name.toLowerCase().includes(search.toLowerCase()) ||
+        contact.phone.toLowerCase().includes(search.toLowerCase())
+      );
+    }
+    
+    // Terapkan pengurutan
+    allContacts.sort((a, b) => {
+      const aValue = a[sortBy]?.toLowerCase() || '';
+      const bValue = b[sortBy]?.toLowerCase() || '';
+      return sortOrder === 'asc' ? 
+        aValue.localeCompare(bValue) : 
+        bValue.localeCompare(aValue);
+    });
+
+    return {
+      data: allContacts,
+      total: allContacts.length,
+      page: 1,
+      totalPages: 1
+    };
+  },
+
+  /**
+   * Sinkronisasi kontak server ke localStorage
+   * @private
+   */
+  syncServerContactsToLocal: (serverContacts) => {
+    const existingContacts = localStorageUtil.getAllContacts();
+    const newServerContacts = serverContacts.filter(newContact => 
+      !existingContacts.some(existingContact => existingContact.id === newContact.id)
+    );
+    localStorageUtil.saveAllContacts([...existingContacts, ...newServerContacts]);
+  },
+
+  /**
+   * Menambah kontak baru
+   * @param {Object} contact - Data kontak baru
+   * @returns {Promise<Object>} Kontak yang berhasil ditambahkan
+   */
   addContact: async (contact) => {
     try {
       const isOnline = await checkServerStatus();
       if (!isOnline) {
         console.log('Server offline, saving to local storage');
-        const pendingContact = localStorageUtil.addPendingContact(contact);
-        return pendingContact;
+        return localStorageUtil.addPendingContact(contact);
       }
 
       const response = await axios.post(`${API_URL}/phonebooks`, contact);
       return response.data;
     } catch (error) {
       console.error('Gagal menambah kontak:', error);
-      // Save to local storage if request fails
-      const pendingContact = localStorageUtil.addPendingContact(contact);
-      return pendingContact;
+      return localStorageUtil.addPendingContact(contact);
     }
   },
 
-  // Resend pending contact
+  /**
+   * Mengirim ulang kontak yang pending
+   * @param {Object} pendingContact - Kontak yang akan dikirim ulang
+   * @returns {Promise<Object>} Hasil pengiriman ulang
+   */
   resendContact: async (pendingContact) => {
     try {
       const isOnline = await checkServerStatus();
@@ -142,7 +171,6 @@ export const api = {
         throw new Error('Server sedang tidak aktif. Silakan coba lagi nanti.');
       }
 
-      // Remove pending ID and status before sending to server
       const { id, status, ...contactData } = pendingContact;
       
       console.log('Mengirim ulang kontak ke server:', contactData);
@@ -150,7 +178,6 @@ export const api = {
       
       if (response.data) {
         console.log('Kontak berhasil dikirim ke server');
-        // Remove from local storage after successful send
         localStorageUtil.removePendingContact(pendingContact.id);
         return response.data;
       }
@@ -160,54 +187,58 @@ export const api = {
     }
   },
 
-  // Memperbarui kontak
+  /**
+   * Memperbarui kontak yang ada
+   * @param {string} id - ID kontak yang akan diperbarui
+   * @param {Object} contact - Data kontak yang diperbarui
+   * @returns {Promise<Object>} Kontak yang berhasil diperbarui
+   */
   updateContact: async (id, contact) => {
     try {
       const isOnline = await checkServerStatus();
       if (!isOnline) {
-        // Save to local storage if offline
-        const pendingContact = localStorageUtil.addPendingContact(contact);
-        return pendingContact;
+        return localStorageUtil.addPendingContact(contact);
       }
 
       const response = await axios.put(`${API_URL}/phonebooks/${id}`, contact);
       return response.data;
     } catch (error) {
       console.error('Gagal memperbarui kontak:', error);
-      // Save to local storage if request fails
-      const pendingContact = localStorageUtil.addPendingContact(contact);
-      return pendingContact;
+      return localStorageUtil.addPendingContact(contact);
     }
   },
 
-  // Menghapus kontak
+  /**
+   * Menghapus kontak
+   * @param {string} id - ID kontak yang akan dihapus
+   * @returns {Promise<Object>} Hasil penghapusan
+   */
   deleteContact: async (id) => {
     try {
       const isOnline = await checkServerStatus();
       if (!isOnline) {
-        // Save to local storage if offline
-        const pendingContact = localStorageUtil.addPendingContact({ id, status: 'deleted' });
-        return pendingContact;
+        return localStorageUtil.addPendingContact({ id, status: 'deleted' });
       }
 
       const response = await axios.delete(`${API_URL}/phonebooks/${id}`);
       return response.data;
     } catch (error) {
       console.error('Gagal menghapus kontak:', error);
-      // Save to local storage if request fails
-      const pendingContact = localStorageUtil.addPendingContact({ id, status: 'deleted' });
-      return pendingContact;
+      return localStorageUtil.addPendingContact({ id, status: 'deleted' });
     }
   },
 
-  // Memperbarui avatar kontak
+  /**
+   * Memperbarui avatar kontak
+   * @param {string} id - ID kontak
+   * @param {FormData} formData - Data avatar baru
+   * @returns {Promise<Object>} Hasil pembaruan avatar
+   */
   updateAvatar: async (id, formData) => {
     try {
       const isOnline = await checkServerStatus();
       if (!isOnline) {
-        // Save to local storage if offline
-        const pendingContact = localStorageUtil.addPendingContact({ id, status: 'avatar-updated' });
-        return pendingContact;
+        return localStorageUtil.addPendingContact({ id, status: 'avatar-updated' });
       }
 
       const response = await axios.put(`${API_URL}/phonebooks/${id}/avatar`, formData, {
@@ -216,13 +247,15 @@ export const api = {
       return response.data;
     } catch (error) {
       console.error('Gagal memperbarui avatar:', error);
-      // Save to local storage if request fails
-      const pendingContact = localStorageUtil.addPendingContact({ id, status: 'avatar-updated' });
-      return pendingContact;
+      return localStorageUtil.addPendingContact({ id, status: 'avatar-updated' });
     }
   },
 
-  // Mengambil detail kontak berdasarkan ID
+  /**
+   * Mengambil detail kontak berdasarkan ID
+   * @param {string} id - ID kontak
+   * @returns {Promise<Object>} Detail kontak
+   */
   getContactById: async (id) => {
     try {
       const response = await axios.get(`${API_URL}/phonebooks/${id}`);

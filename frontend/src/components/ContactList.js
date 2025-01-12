@@ -1,25 +1,70 @@
-// Komponen ContactList: Menampilkan daftar kontak dengan fitur infinite scrolling
 import React, { useEffect, useRef } from "react";
 import ContactCard from "./ContactCard";
 
-export default function ContactList({ contacts, onEdit, onDelete, onAvatarUpdate, onResend, onLoadMore, hasMore }) {
+/**
+ * Komponen ContactList
+ * 
+ * Menampilkan daftar kontak dengan fitur infinite scrolling.
+ * Menggunakan Intersection Observer untuk memuat lebih banyak kontak
+ * saat pengguna mencapai akhir daftar.
+ * 
+ * @param {Object} props
+ * @param {Array} props.contacts - Daftar kontak yang akan ditampilkan
+ * @param {Function} props.onEdit - Fungsi untuk mengedit kontak
+ * @param {Function} props.onDelete - Fungsi untuk menghapus kontak
+ * @param {Function} props.onAvatarUpdate - Fungsi untuk mengupdate avatar
+ * @param {Function} props.onResend - Fungsi untuk mengirim ulang kontak pending
+ * @param {Function} props.onLoadMore - Fungsi untuk memuat lebih banyak kontak
+ * @param {boolean} props.hasMore - Menandakan masih ada kontak yang bisa dimuat
+ */
+export default function ContactList({ 
+  contacts, 
+  onEdit, 
+  onDelete, 
+  onAvatarUpdate, 
+  onResend, 
+  onLoadMore, 
+  hasMore 
+}) {
+  // ==================== Refs ====================
+  
+  /**
+   * Ref untuk elemen kontak terakhir
+   * Digunakan untuk Intersection Observer
+   */
   const lastContact = useRef();
 
+  // ==================== Effects ====================
+
+  /**
+   * Effect untuk mengatur Intersection Observer
+   * Memantau elemen kontak terakhir untuk infinite scrolling
+   */
   useEffect(() => {
+    // Jangan inisialisasi observer jika tidak ada elemen terakhir
+    // atau tidak ada data lagi yang bisa dimuat
+    // atau sedang dalam mode offline
     if (!lastContact.current || !hasMore || !navigator.onLine) return;
 
+    // Buat observer untuk memantau elemen terakhir
     const observer = new IntersectionObserver(entries => {
       if (entries[0].isIntersecting && hasMore) {
         onLoadMore();
       }
     }, {
-      threshold: 0.5
+      threshold: 0.5 // Trigger saat elemen terlihat 50%
     });
 
+    // Mulai memantau elemen terakhir
     observer.observe(lastContact.current);
+
+    // Cleanup observer saat komponen unmount
     return () => observer.disconnect();
   }, [hasMore, onLoadMore]);
 
+  // ==================== Render ====================
+
+  // Tampilkan pesan jika tidak ada kontak
   if (!contacts || contacts.length === 0) {
     return (
       <div className="contact-list-empty">
@@ -28,6 +73,7 @@ export default function ContactList({ contacts, onEdit, onDelete, onAvatarUpdate
     );
   }
 
+  // Tampilkan daftar kontak
   return (
     <div className="contact-list">
       {contacts.map((contact, index) => (
