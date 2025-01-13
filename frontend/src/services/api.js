@@ -1,106 +1,174 @@
+/**
+ * API Service Module
+ * 
+ * Provides a centralized interface for all API interactions.
+ * Uses axios for HTTP requests and includes error handling.
+ */
+
 import axios from 'axios';
 
-// URL dasar API
-const API_URL = 'http://localhost:3001/api';
+// API Configuration
+const API_CONFIG = {
+  BASE_URL: 'http://localhost:3001/api',
+  ENDPOINTS: {
+    CONTACTS: '/phonebooks',
+    AVATAR: '/avatar'
+  }
+};
 
-// Objek api untuk interaksi dengan backend
+/**
+ * API service object containing all API interaction methods
+ */
 export const api = {
-  // Mengambil daftar kontak
-  getContacts: async (page = 1, limit = 5, sortBy = 'name', sortOrder = 'asc', search = '') => {
+  /**
+   * Fetch contacts with pagination, sorting, and search
+   * 
+   * @param {number} page - Current page number
+   * @param {number} limit - Number of items per page
+   * @param {string} sortBy - Field to sort by
+   * @param {string} sortOrder - Sort direction ('asc' or 'desc')
+   * @param {string} search - Search query
+   * @returns {Promise<Object>} Paginated contacts data
+   */
+  getContacts: async (
+    page = 1, 
+    limit = 5, 
+    sortBy = 'name', 
+    sortOrder = 'asc', 
+    search = ''
+  ) => {
     try {
-      const response = await axios.get(`${API_URL}/phonebooks`, {
+      const response = await axios.get(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.CONTACTS}`, {
         params: { page, limit, sortBy, sortOrder, name: search }
       });
-      console.log('Respon API:', response.data);
       return response.data;
     } catch (error) {
-      console.error('Gagal mengambil kontak:', error);
+      console.error('Failed to fetch contacts:', error);
       throw error;
     }
   },
 
-  // Menambah kontak baru
+  /**
+   * Create a new contact
+   * 
+   * @param {Object} contact - Contact data to create
+   * @returns {Promise<Object>} Created contact data
+   */
   addContact: async (contact) => {
     try {
-      const response = await axios.post(`${API_URL}/phonebooks`, contact);
+      const response = await axios.post(
+        `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.CONTACTS}`, 
+        contact
+      );
       return response.data;
     } catch (error) {
-      console.error('Gagal menambah kontak:', error);
+      console.error('Failed to add contact:', error);
       throw error;
     }
   },
 
-  // Memperbarui kontak
+  /**
+   * Update an existing contact
+   * 
+   * @param {string|number} id - Contact ID
+   * @param {Object} contact - Updated contact data
+   * @returns {Promise<Object>} Updated contact data
+   */
   updateContact: async (id, contact) => {
     try {
-      const response = await axios.put(`${API_URL}/phonebooks/${id}`, contact);
+      const response = await axios.put(
+        `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.CONTACTS}/${id}`, 
+        contact
+      );
       return response.data;
     } catch (error) {
-      console.error('Gagal memperbarui kontak:', error);
+      console.error('Failed to update contact:', error);
       throw error;
     }
   },
 
-  // Menghapus kontak
+  /**
+   * Delete a contact
+   * 
+   * @param {string|number} id - Contact ID to delete
+   * @returns {Promise<Object>} Deletion confirmation
+   */
   deleteContact: async (id) => {
     try {
-      const response = await axios.delete(`${API_URL}/phonebooks/${id}`);
+      const response = await axios.delete(
+        `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.CONTACTS}/${id}`
+      );
       return response.data;
     } catch (error) {
-      console.error('Gagal menghapus kontak:', error);
+      console.error('Failed to delete contact:', error);
       throw error;
     }
   },
 
-  // Memperbarui avatar kontak
+  /**
+   * Update contact's avatar
+   * 
+   * @param {string|number} id - Contact ID
+   * @param {FormData} formData - Form data containing the avatar file
+   * @returns {Promise<Object>} Updated contact data with new avatar
+   */
   updateAvatar: async (id, formData) => {
     try {
-      const response = await axios.put(`${API_URL}/phonebooks/${id}/avatar`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      const response = await axios.put(
+        `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.CONTACTS}/${id}${API_CONFIG.ENDPOINTS.AVATAR}`,
+        formData,
+        {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        }
+      );
       return response.data;
     } catch (error) {
-      console.error('Gagal memperbarui avatar:', error);
+      console.error('Failed to update avatar:', error);
       throw error;
     }
   },
 
-  // Mengambil detail kontak berdasarkan ID
+  /**
+   * Fetch a single contact by ID
+   * 
+   * @param {string|number} id - Contact ID to fetch
+   * @returns {Promise<Object>} Contact data
+   */
   getContactById: async (id) => {
     try {
-      const response = await axios.get(`${API_URL}/phonebooks/${id}`);
+      const response = await axios.get(
+        `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.CONTACTS}/${id}`
+      );
       return response.data;
     } catch (error) {
-      console.error('Gagal mengambil detail kontak:', error);
+      console.error('Failed to fetch contact details:', error);
       throw error;
     }
   }
 };
 
-/*
-Penjelasan:
-Modul ini menyediakan antarmuka untuk berinteraksi dengan backend API menggunakan axios.
-
-Alur dan Logika:
-1. Impor axios untuk melakukan permintaan HTTP.
-2. Tentukan URL dasar API.
-3. Buat objek 'api' dengan metode-metode untuk operasi CRUD:
-   - getContacts: Mengambil daftar kontak dengan opsi paginasi, pengurutan, dan pencarian.
-   - addContact: Menambahkan kontak baru.
-   - updateContact: Memperbarui kontak yang ada.
-   - deleteContact: Menghapus kontak.
-   - updateAvatar: Memperbarui avatar kontak.
-   - getContactById: Mengambil detail kontak berdasarkan ID.
-4. Setiap metode menggunakan axios untuk mengirim permintaan ke endpoint yang sesuai.
-5. Penanganan kesalahan dilakukan dengan try-catch, mencatat error ke konsol dan melemparnya kembali.
-6. Data respons dari API dikembalikan jika permintaan berhasil.
-
-Keterhubungan dengan Backend:
-- Setiap metode dalam objek 'api' berkorespondensi dengan endpoint tertentu di backend.
-- Data dikirim dan diterima dalam format JSON.
-- Permintaan GET menggunakan parameter query untuk paginasi, pengurutan, dan pencarian.
-- Permintaan POST dan PUT mengirim data kontak ke backend untuk disimpan atau diperbarui.
-- Permintaan DELETE mengirim ID kontak yang akan dihapus.
-- Untuk pembaruan avatar, digunakan Content-Type multipart/form-data.
-- Semua interaksi dengan backend dilakukan secara asynchronous menggunakan async/await.
-*/
+/**
+ * API Module Documentation
+ * 
+ * This module provides a centralized interface for all API interactions using axios.
+ * 
+ * Features:
+ * - Pagination support for contact listing
+ * - Sorting and searching capabilities
+ * - CRUD operations for contacts
+ * - Avatar upload handling
+ * 
+ * Error Handling:
+ * - All methods include try-catch blocks
+ * - Errors are logged to console and re-thrown
+ * - Consistent error message format
+ * 
+ * Usage Example:
+ * ```javascript
+ * // Fetch contacts with pagination
+ * const contacts = await api.getContacts(1, 10, 'name', 'asc', 'search');
+ * 
+ * // Add a new contact
+ * const newContact = await api.addContact({ name: 'John', phone: '123' });
+ * ```
+ */

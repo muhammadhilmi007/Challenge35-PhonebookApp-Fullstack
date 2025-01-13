@@ -792,8 +792,10 @@ html, body {
   right: 10px;
 }
 
-.contact-card {
-  position: relative;
+.contact-list-item.pending {
+  border: 2px solid #ffd700;
+  background-color: rgba(255, 215, 0, 0.1);
+  border-radius: 12px;
 }
 
 .contact-actions button {

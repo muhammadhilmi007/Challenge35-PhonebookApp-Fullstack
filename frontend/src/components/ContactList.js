@@ -1,34 +1,68 @@
-import React, { useEffect, useRef } from 'react';
-import ContactCard from './ContactCard';
+/**
+ * ContactList Component
+ * 
+ * Displays a list of contacts with infinite scrolling functionality.
+ * Features:
+ * - Infinite scroll loading
+ * - Empty state handling
+ * - Contact card rendering
+ * 
+ * @component
+ * @param {Object} props
+ * @param {Function} props.onAvatarUpdate - Callback for updating contact avatar
+ */
 
-export default function ContactList({ 
-  contacts, 
-  onEdit, 
-  onDelete, 
-  onAvatarUpdate, 
-  onLoadMore, 
-  hasMore,
-  onResendSuccess,
-  onRefreshContacts
-}) {
+import React, { useEffect, useRef } from 'react';
+// Components
+import ContactCard from './ContactCard';
+// Context
+import { useContactContext } from '../contexts/ContactContext';
+
+const ContactList = ({ onAvatarUpdate }) => {
+  // Context
+  const { 
+    state, 
+    loadContacts,
+    handleEdit,
+    handleDelete,
+    handleResendSuccess,
+    handleRefreshContacts
+  } = useContactContext();
+  
+  // Ref for infinite scroll
   const lastContactRef = useRef();
 
+  /**
+   * Setup infinite scroll observer
+   * Triggers loadContacts when last contact becomes visible
+   */
   useEffect(() => {
     if (!lastContactRef.current) return;
 
+    const observerOptions = {
+      root: null,
+      rootMargin: '20px',
+      threshold: 0.1
+    };
+
     const observer = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && hasMore) {
-        onLoadMore();
+      if (entries[0].isIntersecting && state.hasMore) {
+        loadContacts(true);
       }
-    });
+    }, observerOptions);
 
     observer.observe(lastContactRef.current);
+    
+    // Cleanup observer on unmount
     return () => observer.disconnect();
-  }, [hasMore, onLoadMore]);
+  }, [state.hasMore, loadContacts]);
 
-  if (!contacts.length) {
+  /**
+   * Render empty state when no contacts are available
+   */
+  if (!state.contacts.length) {
     return (
-      <div className="contact-list-empty">
+      <div className="contact-list-empty" role="status">
         <p>No contacts available</p>
       </div>
     );
@@ -36,19 +70,32 @@ export default function ContactList({
 
   return (
     <div className="contact-list">
-      {contacts.map((contact, index) => (
-        <div key={contact.id} ref={index === contacts.length - 1 ? lastContactRef : null}>
+      {/* Contact Cards */}
+      {state.contacts.map((contact, index) => (
+        <div 
+          key={contact.id} 
+          ref={index === state.contacts.length - 1 ? lastContactRef : null}
+          className={`contact-list-item ${contact.status === 'pending' ? 'pending' : ''}`}
+        >
           <ContactCard
             contact={contact}
-            onEdit={onEdit}
-            onDelete={onDelete}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
             onAvatarUpdate={onAvatarUpdate}
-            onResendSuccess={onResendSuccess}
-            onRefreshContacts={onRefreshContacts}
+            onResendSuccess={handleResendSuccess}
+            onRefreshContacts={handleRefreshContacts}
           />
         </div>
       ))}
-      {hasMore && <p>Loading more...</p>}
+
+      {/* Loading State */}
+      {state.hasMore && (
+        <div className="loading-more" role="status">
+          Loading more...
+        </div>
+      )}
     </div>
   );
-}
+};
+
+export default ContactList;

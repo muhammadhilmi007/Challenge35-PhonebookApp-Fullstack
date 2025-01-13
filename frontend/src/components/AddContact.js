@@ -1,17 +1,47 @@
+/**
+ * AddContact Component
+ * 
+ * Handles the creation of new contacts with offline support.
+ * Features:
+ * - Form validation
+ * - Error handling
+ * - Offline support with pending contacts
+ * - Search parameter preservation
+ * 
+ * @component
+ */
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+// Services
 import { api } from "../services/api";
 import { localStorageUtil } from "../services/localStorage";
+// Context
+import { useContactContext } from "../contexts/ContactContext";
 
-export default function AddContact() {
+const AddContact = () => {
+  // Hooks
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: "", phone: "" });
+  const { handleRefreshContacts } = useContactContext();
+
+  // Form state
+  const [form, setForm] = useState({ 
+    name: "", 
+    phone: "" 
+  });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
+  /**
+   * Handles form submission and contact creation
+   * Supports offline functionality by storing pending contacts
+   * 
+   * @param {Event} e - Form submission event
+   */
   const saveContact = async (e) => {
     e.preventDefault();
 
+    // Validate form inputs
     if (!form.name.trim() || !form.phone.trim()) {
       setError("Name and phone number are required");
       return;
@@ -21,19 +51,22 @@ export default function AddContact() {
       setSaving(true);
       setError("");
       
-      // Try to save to server first
       try {
+        // Attempt to save contact to server
         await api.addContact(form);
-        navigate("/");
+        handleRefreshContacts();
+        navigateBack();
       } catch (err) {
-        // If server is not available, save to localStorage
+        // Handle offline scenario
         const newContact = localStorageUtil.addPendingContact(form);
-        // Save existing contacts to localStorage if not already saved
         const currentContacts = localStorageUtil.getAllContacts();
+        
         if (!currentContacts.length) {
           localStorageUtil.saveAllContacts([newContact]);
         }
-        navigate("/");
+        
+        handleRefreshContacts();
+        navigateBack();
       }
     } catch (err) {
       setError(err.response?.data?.error || "Failed to add contact");
@@ -42,7 +75,10 @@ export default function AddContact() {
     }
   };
 
-  const goBack = () => {
+  /**
+   * Navigates back to the contact list while preserving search parameters
+   */
+  const navigateBack = () => {
     const params = new URLSearchParams();
     const savedValues = {
       search: sessionStorage.getItem("contactSearch"),
@@ -50,10 +86,12 @@ export default function AddContact() {
       sortOrder: sessionStorage.getItem("contactSortOrder"),
     };
 
+    // Preserve search parameter if search was active
     if (sessionStorage.getItem("searchActive") && savedValues.search) {
       params.append("search", savedValues.search);
     }
 
+    // Add other parameters
     Object.entries(savedValues).forEach(([key, value]) => {
       if (value && key !== "search") {
         params.append(key, value);
@@ -64,38 +102,67 @@ export default function AddContact() {
     navigate(query ? `/?${query}` : "/", { replace: true });
   };
 
+  /**
+   * Handles form input changes
+   * 
+   * @param {string} field - Field name to update
+   * @param {string} value - New value for the field
+   */
+  const handleInputChange = (field, value) => {
+    setForm(prev => ({ ...prev, [field]: value }));
+    if (error) setError(""); // Clear error when user starts typing
+  };
+
   return (
     <div className="add-view">
       <h2>Add Contact</h2>
-      {error && <p className="error-message">{error}</p>}
+      
+      {/* Error Message */}
+      {error && (
+        <p className="error-message" role="alert">
+          {error}
+        </p>
+      )}
 
+      {/* Add Contact Form */}
       <form onSubmit={saveContact} className="add-form">
         <input
           type="text"
           name="name"
           placeholder="Name"
           value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          onChange={(e) => handleInputChange('name', e.target.value)}
           required
           className="add-input"
+          aria-label="Contact name"
+          disabled={saving}
         />
         <input
           type="tel"
           name="phone"
           placeholder="Phone"
           value={form.phone}
-          onChange={(e) => setForm({ ...form, phone: e.target.value })}
+          onChange={(e) => handleInputChange('phone', e.target.value)}
           required
           className="add-input"
+          aria-label="Contact phone number"
+          disabled={saving}
         />
+
+        {/* Form Actions */}
         <div className="add-form-actions">
-          <button type="submit" className="save-button" disabled={saving}>
+          <button 
+            type="submit" 
+            className="save-button" 
+            disabled={saving}
+            aria-busy={saving}
+          >
             {saving ? "Saving..." : "Save"}
           </button>
           <button
             type="button"
             className="cancel-button"
-            onClick={goBack}
+            onClick={navigateBack}
             disabled={saving}
           >
             Cancel
@@ -104,4 +171,6 @@ export default function AddContact() {
       </form>
     </div>
   );
-}
+};
+
+export default AddContact;
