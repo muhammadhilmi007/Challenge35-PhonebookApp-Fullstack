@@ -779,3 +779,32 @@ html, body {
   height: 100%;
   overflow-y: auto;
 }
+
+.pending-badge {
+  background-color: #ffd700;
+  color: #333;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.8em;
+  margin-left: 8px;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+.contact-card {
+  position: relative;
+}
+
+.contact-actions button {
+  padding: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #666;
+  transition: color 0.3s ease;
+}
+
+.contact-actions button:hover {
+  color: #007bff;
+}

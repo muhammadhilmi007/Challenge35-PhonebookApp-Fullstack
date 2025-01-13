@@ -12,6 +12,7 @@
     "cra-template": "1.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-dropzone": "^14.3.5",
     "react-icons": "^5.4.0",
     "react-intersection-observer": "^9.13.1",
     "react-router-dom": "^6.21.1",

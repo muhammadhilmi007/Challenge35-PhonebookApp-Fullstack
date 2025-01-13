@@ -1,7 +1,16 @@
 import React, { useEffect, useRef } from 'react';
 import ContactCard from './ContactCard';
 
-export default function ContactList({ contacts, onEdit, onDelete, onAvatarUpdate, onLoadMore, hasMore }) {
+export default function ContactList({ 
+  contacts, 
+  onEdit, 
+  onDelete, 
+  onAvatarUpdate, 
+  onLoadMore, 
+  hasMore,
+  onResendSuccess,
+  onRefreshContacts
+}) {
   const lastContactRef = useRef();
 
   useEffect(() => {
@@ -34,6 +43,8 @@ export default function ContactList({ contacts, onEdit, onDelete, onAvatarUpdate
             onEdit={onEdit}
             onDelete={onDelete}
             onAvatarUpdate={onAvatarUpdate}
+            onResendSuccess={onResendSuccess}
+            onRefreshContacts={onRefreshContacts}
           />
         </div>
       ))}
@@ -41,4 +52,3 @@ export default function ContactList({ contacts, onEdit, onDelete, onAvatarUpdate
     </div>
   );
 }
-

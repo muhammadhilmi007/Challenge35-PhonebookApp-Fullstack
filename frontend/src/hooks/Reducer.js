@@ -8,7 +8,8 @@ export const ACTIONS = {
   SET_HAS_MORE: 'SET_HAS_MORE',
   UPDATE_SORT: 'UPDATE_SORT',
   UPDATE_SEARCH: 'UPDATE_SEARCH',
-  CLEAR_CONTACTS: 'CLEAR_CONTACTS'
+  CLEAR_CONTACTS: 'CLEAR_CONTACTS',
+  SET_OFFLINE: 'SET_OFFLINE'
 };
 
 // Reducer to handle contact state changes
@@ -52,8 +53,12 @@ export function contactReducer(state, action) {
         ...state,
         contacts: [],
         page: 1,
-        hasMore: true
+        hasMore: true,
+        isOffline: false
       };
+
+    case ACTIONS.SET_OFFLINE:
+      return { ...state, isOffline: action.payload };
 
     default:
       return state;

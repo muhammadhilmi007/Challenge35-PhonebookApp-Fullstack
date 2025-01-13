@@ -1,24 +1,69 @@
 import React, { useState } from "react";
-import { BsPencilSquare, BsTrash } from "react-icons/bs";
+import { BsPencilSquare, BsTrash, BsArrowRepeat } from "react-icons/bs";
+import { api } from "../services/api";
+import { localStorageUtil } from "../services/localStorage";
+import "../styles/styles.css";
 
 export default function ContactCard({
   contact,
   onEdit,
   onDelete,
   onAvatarUpdate,
+  onResendSuccess,
+  onRefreshContacts
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
   const [form, setForm] = useState({
     name: contact.name,
     phone: contact.phone,
+    photo: contact.photo // Preserve photo in form state
   });
+
+  const handleResend = async () => {
+    try {
+      const isAvailable = await localStorageUtil.isServerAvailable();
+      if (!isAvailable) {
+        alert("Server is not available. Please try again later.");
+        return;
+      }
+
+      // Try to save to server
+      const savedContact = await api.addContact({
+        name: contact.name,
+        phone: contact.phone,
+        photo: contact.photo // Include photo when resending
+      });
+
+      // Remove from pending contacts
+      localStorageUtil.removePendingContact(contact.id);
+
+      // Notify parent component of successful resend
+      if (onResendSuccess) {
+        await onResendSuccess(contact.id, savedContact);
+      }
+
+      // Trigger contacts refresh
+      if (onRefreshContacts) {
+        onRefreshContacts();
+      }
+    } catch (error) {
+      console.error("Error resending contact:", error);
+      alert("Failed to resend contact. Please try again.");
+    }
+  };
 
   const saveChanges = async () => {
     if (!form.name.trim() || !form.phone.trim()) return;
 
     try {
-      await onEdit(contact.id, form);
+      // Include photo in the update
+      const updatedContact = {
+        ...form,
+        id: contact.id,
+        photo: contact.photo // Ensure photo is included
+      };
+      await onEdit(contact.id, updatedContact);
       setIsEditing(false);
     } catch (error) {
       console.error("Error updating contact:", error);
@@ -38,7 +83,7 @@ export default function ContactCard({
     return (
       <div className="contact-card">
         <div className="avatar">
-          <img src={contact.photo || '/default-avatar.png'} alt={contact.name} />
+          <img src={contact.photo || '/user-avatar.svg'} alt={contact.name} />
         </div>
         <div className="contact-info">
           <div className="edit-form">
@@ -69,17 +114,24 @@ export default function ContactCard({
   return (
     <div className="contact-card">
       <div className="avatar" onClick={() => onAvatarUpdate(contact.id)}>
-        <img src={contact.photo || '/default-avatar.png'} alt={contact.name} />
+        <img src={contact.photo || '/user-avatar.svg'} alt={contact.name} />
       </div>
       <div className="contact-info">
         <div className="contact-details">
           <h3>{contact.name}</h3>
           <p>{contact.phone}</p>
+          {contact.status === 'pending' && <span className="pending-badge">Pending</span>}
         </div>
         <div className="contact-actions">
-          <button onClick={() => setIsEditing(true)} aria-label="Edit contact">
-            <BsPencilSquare />
-          </button>
+          {contact.status === 'pending' ? (
+            <button onClick={handleResend} aria-label="Resend contact">
+              <BsArrowRepeat />
+            </button>
+          ) : (
+            <button onClick={() => setIsEditing(true)} aria-label="Edit contact">
+              <BsPencilSquare />
+            </button>
+          )}
           <button onClick={() => setShowDelete(true)} aria-label="Delete contact">
             <BsTrash />
           </button>
@@ -89,7 +141,7 @@ export default function ContactCard({
       {showDelete && (
         <div className="modal-overlay">
           <div className="confirm-dialog">
-            <p>Delete this contact?</p>
+            <p>Are you sure you want to delete this contact?</p>
             <div className="confirm-buttons">
               <button onClick={deleteContact}>Yes</button>
               <button onClick={() => setShowDelete(false)}>No</button>

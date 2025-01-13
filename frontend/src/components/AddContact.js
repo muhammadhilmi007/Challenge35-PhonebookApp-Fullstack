@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../services/api";
+import { localStorageUtil } from "../services/localStorage";
 
 export default function AddContact() {
   const navigate = useNavigate();
@@ -19,8 +20,21 @@ export default function AddContact() {
     try {
       setSaving(true);
       setError("");
-      await api.addContact(form);
-      navigate("/");
+      
+      // Try to save to server first
+      try {
+        await api.addContact(form);
+        navigate("/");
+      } catch (err) {
+        // If server is not available, save to localStorage
+        const newContact = localStorageUtil.addPendingContact(form);
+        // Save existing contacts to localStorage if not already saved
+        const currentContacts = localStorageUtil.getAllContacts();
+        if (!currentContacts.length) {
+          localStorageUtil.saveAllContacts([newContact]);
+        }
+        navigate("/");
+      }
     } catch (err) {
       setError(err.response?.data?.error || "Failed to add contact");
     } finally {
