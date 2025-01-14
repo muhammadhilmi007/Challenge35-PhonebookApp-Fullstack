@@ -12,28 +12,38 @@
  * @param {Function} props.onAdd - Callback function to handle adding new contacts
  */
 
-import React, { useState } from 'react';
+import React, { useReducer } from 'react';
 // Icons
 import { BsFillPersonPlusFill, BsSearch } from "react-icons/bs";
 import { FaSortAlphaUpAlt, FaSortAlphaDownAlt } from "react-icons/fa";
 // Context
 import { useContactContext } from '../contexts/ContactContext';
 
+const initialState = {
+  sortOrder: sessionStorage.getItem('contactSortOrder') || 'asc'
+};
+
+function reducer(state, action) {
+  switch (action.type) {
+    case 'TOGGLE_SORT_ORDER':
+      return { ...state, sortOrder: state.sortOrder === 'asc' ? 'desc' : 'asc' };
+    default:
+      return state;
+  }
+}
+
 const SearchBar = ({ onAdd }) => {
   // Context and state
-  const { state, handleSearch, handleSort } = useContactContext();
-  const [sortOrder, setSortOrder] = useState(
-    sessionStorage.getItem('contactSortOrder') || 'asc'
-  );
+  const { state: contextState, handleSearch, handleSort } = useContactContext();
+  const [state, dispatch] = useReducer(reducer, initialState);
 
   /**
    * Toggles sort order between ascending and descending
    * Updates both local state and parent component
    */
   const handleSortClick = () => {
-    const newOrder = sortOrder === 'asc' ? 'desc' : 'asc';
-    setSortOrder(newOrder);
-    handleSort('name', newOrder);
+    dispatch({ type: 'TOGGLE_SORT_ORDER' });
+    handleSort('name', state.sortOrder === 'asc' ? 'desc' : 'asc');
   };
 
   return (
@@ -42,9 +52,9 @@ const SearchBar = ({ onAdd }) => {
       <button 
         onClick={handleSortClick} 
         className="sort-button"
-        aria-label={`Sort ${sortOrder === 'asc' ? 'descending' : 'ascending'}`}
+        aria-label={`Sort ${state.sortOrder === 'asc' ? 'descending' : 'ascending'}`}
       >
-        {sortOrder === 'asc' ? <FaSortAlphaDownAlt /> : <FaSortAlphaUpAlt />}
+        {state.sortOrder === 'asc' ? <FaSortAlphaDownAlt /> : <FaSortAlphaUpAlt />}
       </button>
 
       {/* Search Input */}
@@ -53,7 +63,7 @@ const SearchBar = ({ onAdd }) => {
         <input
           type="text"
           placeholder="Search contacts..."
-          value={state.search}
+          value={contextState.search}
           onChange={(e) => handleSearch(e.target.value)}
           aria-label="Search contacts"
         />
