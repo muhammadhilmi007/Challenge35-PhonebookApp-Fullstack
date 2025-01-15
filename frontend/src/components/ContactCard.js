@@ -19,7 +19,7 @@
  * @param {Function} props.handleRefreshContacts - Callback to refresh contact list
  */
 
-import React, { useReducer } from "react";
+import React, { useState } from "react";
 // Icons
 import { BsPencilSquare, BsTrash, BsArrowRepeat } from "react-icons/bs";
 // Services
@@ -30,31 +30,6 @@ import { useContactContext } from "../contexts/ContactContext";
 // Styles
 import "../styles/styles.css";
 
-const initialState = {
-  isEditing: false,
-  showDelete: false,
-  form: {
-    name: '',
-    phone: '',
-    photo: ''
-  }
-};
-
-function reducer(state, action) {
-  switch (action.type) {
-    case 'SET_EDITING':
-      return { ...state, isEditing: action.payload };
-    case 'SET_SHOW_DELETE':
-      return { ...state, showDelete: action.payload };
-    case 'SET_FORM':
-      return { ...state, form: { ...state.form, ...action.payload } };
-    case 'RESET_FORM':
-      return { ...state, form: action.payload };
-    default:
-      return state;
-  }
-}
-
 const ContactCard = ({ contact, onAvatarUpdate }) => {
   // Context and state
   const { 
@@ -64,13 +39,13 @@ const ContactCard = ({ contact, onAvatarUpdate }) => {
     handleRefreshContacts 
   } = useContactContext();
   
-  const [state, dispatch] = useReducer(reducer, {
-    ...initialState,
-    form: {
-      name: contact.name,
-      phone: contact.phone,
-      photo: contact.photo
-    }
+  // State
+  const [isEditing, setIsEditing] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
+  const [form, setForm] = useState({
+    name: contact.name,
+    phone: contact.phone,
+    photo: contact.photo
   });
 
   /**
@@ -108,16 +83,16 @@ const ContactCard = ({ contact, onAvatarUpdate }) => {
    * Handles saving contact changes
    */
   const saveChanges = async () => {
-    if (!state.form.name.trim() || !state.form.phone.trim()) return;
+    if (!form.name.trim() || !form.phone.trim()) return;
 
     try {
       const updatedContact = {
-        ...state.form,
+        ...form,
         id: contact.id,
         photo: contact.photo
       };
       await handleEdit(contact.id, updatedContact);
-      dispatch({ type: 'SET_EDITING', payload: false });
+      setIsEditing(false);
     } catch (error) {
       console.error("Error updating contact:", error);
     }
@@ -129,14 +104,27 @@ const ContactCard = ({ contact, onAvatarUpdate }) => {
   const deleteContact = async () => {
     try {
       await handleDelete(contact.id);
-      dispatch({ type: 'SET_SHOW_DELETE', payload: false });
+      setShowDelete(false);
     } catch (error) {
       console.error("Error deleting contact:", error);
     }
   };
 
+  /**
+   * Handles form input changes
+   * 
+   * @param {string} field - Field name to update
+   * @param {string} value - New value for the field
+   */
+  const handleFormChange = (field, value) => {
+    setForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
   // Render edit mode
-  if (state.isEditing) {
+  if (isEditing) {
     return (
       <div className="contact-card">
         {/* Avatar Section */}
@@ -152,23 +140,23 @@ const ContactCard = ({ contact, onAvatarUpdate }) => {
           <div className="edit-form">
             <input
               type="text"
-              value={state.form.name}
-              onChange={e => dispatch({ type: 'SET_FORM', payload: { name: e.target.value } })}
+              value={form.name}
+              onChange={e => handleFormChange('name', e.target.value)}
               placeholder="Name"
               className="edit-input"
               aria-label="Edit contact name"
             />
             <input
               type="tel"
-              value={state.form.phone}
-              onChange={e => dispatch({ type: 'SET_FORM', payload: { phone: e.target.value } })}
+              value={form.phone}
+              onChange={e => handleFormChange('phone', e.target.value)}
               placeholder="Phone"
               className="edit-input"
               aria-label="Edit contact phone"
             />
             <div className="edit-buttons">
               <button onClick={saveChanges}>Save</button>
-              <button onClick={() => dispatch({ type: 'SET_EDITING', payload: false })}>Cancel</button>
+              <button onClick={() => setIsEditing(false)}>Cancel</button>
             </div>
           </div>
         </div>
@@ -213,7 +201,7 @@ const ContactCard = ({ contact, onAvatarUpdate }) => {
             </button>
           ) : (
             <button 
-              onClick={() => dispatch({ type: 'SET_EDITING', payload: true })} 
+              onClick={() => setIsEditing(true)} 
               aria-label="Edit contact"
               className="action-button edit"
             >
@@ -221,7 +209,7 @@ const ContactCard = ({ contact, onAvatarUpdate }) => {
             </button>
           )}
           <button 
-            onClick={() => dispatch({ type: 'SET_SHOW_DELETE', payload: true })} 
+            onClick={() => setShowDelete(true)} 
             aria-label="Delete contact"
             className="action-button delete"
           >
@@ -231,13 +219,13 @@ const ContactCard = ({ contact, onAvatarUpdate }) => {
       </div>
 
       {/* Delete Confirmation Modal */}
-      {state.showDelete && (
+      {showDelete && (
         <div className="modal-overlay" role="dialog" aria-modal="true">
           <div className="confirm-dialog">
             <p>Are you sure you want to delete this contact?</p>
             <div className="confirm-buttons">
               <button onClick={deleteContact}>Yes</button>
-              <button onClick={() => dispatch({ type: 'SET_SHOW_DELETE', payload: false })}>No</button>
+              <button onClick={() => setShowDelete(false)}>No</button>
             </div>
           </div>
         </div>

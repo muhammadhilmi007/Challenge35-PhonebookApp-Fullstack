@@ -12,7 +12,7 @@
  * @component
  */
 
-import React, { useReducer, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 // Services
 import { api } from "../services/api";
@@ -23,24 +23,6 @@ import { useContactContext } from "../contexts/ContactContext";
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/gif'];
 
-// Reducer function
-const reducer = (state, action) => {
-  switch (action.type) {
-    case 'SET_PREVIEW':
-      return { ...state, preview: action.payload };
-    case 'SET_AVATAR':
-      return { ...state, avatar: action.payload };
-    case 'SET_UPLOADING':
-      return { ...state, uploading: action.payload };
-    case 'SET_ERROR':
-      return { ...state, error: action.payload };
-    case 'SET_IS_DRAGGING':
-      return { ...state, isDragging: action.payload };
-    default:
-      return state;
-  }
-};
-
 const AvatarUpload = () => {
   // Hooks
   const { id } = useParams();
@@ -49,13 +31,11 @@ const AvatarUpload = () => {
   const fileInputRef = useRef(null);
 
   // State
-  const [state, dispatch] = useReducer(reducer, {
-    preview: null,
-    avatar: null,
-    uploading: false,
-    error: "",
-    isDragging: false
-  });
+  const [preview, setPreview] = useState(null);
+  const [avatar, setAvatar] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
 
   /**
    * Fetch current contact avatar on component mount
@@ -64,9 +44,9 @@ const AvatarUpload = () => {
     const fetchContact = async () => {
       try {
         const contact = await api.getContactById(id);
-        dispatch({ type: 'SET_AVATAR', payload: contact?.photo });
+        setAvatar(contact?.photo);
       } catch (err) {
-        dispatch({ type: 'SET_ERROR', payload: "Failed to fetch contact information" });
+        setError("Failed to fetch contact information");
         console.error("Error fetching contact:", err);
       }
     };
@@ -83,21 +63,21 @@ const AvatarUpload = () => {
   const validateAndPreviewFile = (file) => {
     // Validate file type
     if (!ACCEPTED_FILE_TYPES.includes(file.type)) {
-      dispatch({ type: 'SET_ERROR', payload: "Only images (JPEG, PNG, GIF) are allowed" });
+      setError("Only images (JPEG, PNG, GIF) are allowed");
       return;
     }
 
     // Validate file size
     if (file.size > MAX_FILE_SIZE) {
-      dispatch({ type: 'SET_ERROR', payload: "Image size must not exceed 5 MB" });
+      setError("Image size must not exceed 5 MB");
       return;
     }
 
     // Create preview
     const reader = new FileReader();
     reader.onload = () => {
-      dispatch({ type: 'SET_PREVIEW', payload: reader.result });
-      dispatch({ type: 'SET_ERROR', payload: "" });
+      setPreview(reader.result);
+      setError("");
     };
     reader.readAsDataURL(file);
   };
@@ -108,14 +88,14 @@ const AvatarUpload = () => {
    * @returns {Promise<void>}
    */
   const uploadAvatar = async () => {
-    if (!state.preview) return;
+    if (!preview) return;
 
     try {
-      dispatch({ type: 'SET_UPLOADING', payload: true });
-      dispatch({ type: 'SET_ERROR', payload: "" });
+      setUploading(true);
+      setError("");
 
       // Convert preview to file
-      const response = await fetch(state.preview);
+      const response = await fetch(preview);
       const blob = await response.blob();
       const file = new File([blob], "avatar.jpg", { type: "image/jpeg" });
 
@@ -127,10 +107,10 @@ const AvatarUpload = () => {
       handleRefreshContacts();
       navigate("/");
     } catch (err) {
-      dispatch({ type: 'SET_ERROR', payload: "Failed to upload avatar" });
+      setError("Failed to upload avatar");
       console.error("Error uploading avatar:", err);
     } finally {
-      dispatch({ type: 'SET_UPLOADING', payload: false });
+      setUploading(false);
     }
   };
 
@@ -140,15 +120,15 @@ const AvatarUpload = () => {
   const dragEvents = {
     onDragOver: (e) => {
       e.preventDefault();
-      dispatch({ type: 'SET_IS_DRAGGING', payload: true });
+      setIsDragging(true);
     },
     onDragLeave: (e) => {
       e.preventDefault();
-      dispatch({ type: 'SET_IS_DRAGGING', payload: false });
+      setIsDragging(false);
     },
     onDrop: (e) => {
       e.preventDefault();
-      dispatch({ type: 'SET_IS_DRAGGING', payload: false });
+      setIsDragging(false);
       validateAndPreviewFile(e.dataTransfer.files[0]);
     }
   };
@@ -170,16 +150,16 @@ const AvatarUpload = () => {
 
         {/* Upload Area */}
         <div
-          className={`upload-area ${state.isDragging ? "drag-over" : ""}`}
+          className={`upload-area ${isDragging ? "drag-over" : ""}`}
           {...dragEvents}
           role="region"
           aria-label="Avatar upload area"
         >
-          {state.preview ? (
+          {preview ? (
             // Preview Section
             <div className="preview-container">
               <img 
-                src={state.preview} 
+                src={preview} 
                 alt="Avatar preview" 
                 className="avatar-preview"
               />
@@ -194,7 +174,7 @@ const AvatarUpload = () => {
             // Upload Options
             <div className="upload-placeholder">
               <img
-                src={state.avatar || "/user-avatar.svg"}
+                src={avatar || "/user-avatar.svg"}
                 alt="Current avatar"
                 className="current-avatar"
               />
@@ -225,9 +205,9 @@ const AvatarUpload = () => {
         />
 
         {/* Error Display */}
-        {state.error && (
+        {error && (
           <div className="error-message" role="alert">
-            {state.error}
+            {error}
           </div>
         )}
 
@@ -236,15 +216,15 @@ const AvatarUpload = () => {
           <button
             className="upload-button"
             onClick={uploadAvatar}
-            disabled={!state.preview || state.uploading}
-            aria-busy={state.uploading}
+            disabled={!preview || uploading}
+            aria-busy={uploading}
           >
-            {state.uploading ? "Uploading..." : "Upload Avatar"}
+            {uploading ? "Uploading..." : "Upload Avatar"}
           </button>
           <button
             className="cancel-button"
             onClick={() => navigate("/")}
-            disabled={state.uploading}
+            disabled={uploading}
           >
             Cancel
           </button>

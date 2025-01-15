@@ -12,38 +12,23 @@
  * @param {Function} props.onAdd - Callback function to handle adding new contacts
  */
 
-import React, { useReducer } from 'react';
+import React from 'react';
 // Icons
 import { BsFillPersonPlusFill, BsSearch } from "react-icons/bs";
 import { FaSortAlphaUpAlt, FaSortAlphaDownAlt } from "react-icons/fa";
 // Context
 import { useContactContext } from '../contexts/ContactContext';
 
-const initialState = {
-  sortOrder: sessionStorage.getItem('contactSortOrder') || 'asc'
-};
-
-function reducer(state, action) {
-  switch (action.type) {
-    case 'TOGGLE_SORT_ORDER':
-      return { ...state, sortOrder: state.sortOrder === 'asc' ? 'desc' : 'asc' };
-    default:
-      return state;
-  }
-}
-
 const SearchBar = ({ onAdd }) => {
   // Context and state
   const { state: contextState, handleSearch, handleSort } = useContactContext();
-  const [state, dispatch] = useReducer(reducer, initialState);
 
   /**
    * Toggles sort order between ascending and descending
-   * Updates both local state and parent component
    */
   const handleSortClick = () => {
-    dispatch({ type: 'TOGGLE_SORT_ORDER' });
-    handleSort('name', state.sortOrder === 'asc' ? 'desc' : 'asc');
+    const newSortOrder = contextState.sortOrder === 'asc' ? 'desc' : 'asc';
+    handleSort('name', newSortOrder);
   };
 
   return (
@@ -52,9 +37,9 @@ const SearchBar = ({ onAdd }) => {
       <button 
         onClick={handleSortClick} 
         className="sort-button"
-        aria-label={`Sort ${state.sortOrder === 'asc' ? 'descending' : 'ascending'}`}
+        aria-label={`Sort ${contextState.sortOrder === 'asc' ? 'descending' : 'ascending'}`}
       >
-        {state.sortOrder === 'asc' ? <FaSortAlphaDownAlt /> : <FaSortAlphaUpAlt />}
+        {contextState.sortOrder === 'asc' ? <FaSortAlphaDownAlt /> : <FaSortAlphaUpAlt />}
       </button>
 
       {/* Search Input */}

@@ -50,16 +50,20 @@ Contoh struktur routing aplikasi dengan React Router, Component Tree Urutan rend
 ```javascript
 // filepath: src/App.js
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+// Context
+import { ContactProvider } from "./contexts/ContactContext";
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<MainPage />} />
-        <Route path="/add" element={<AddContact />} />
-        <Route path="/avatar/:id" element={<AvatarUpload />} />
-      </Routes>
-    </Router>
+    <ContactProvider>
+      <Router>
+        <Routes>
+          <Route path="/" element={<MainPage />} />
+          <Route path="/add" element={<AddContact />} />
+          <Route path="/avatar/:id" element={<AvatarUpload />} />
+        </Routes>
+      </Router>
+    </ContactProvider>
   );
 }
 ```

@@ -15,36 +15,17 @@
  * @param {Function} props.onCancel - Callback function to cancel editing
  */
 
-import React, { useReducer } from "react";
+import React, { useState } from "react";
 // Services
 import { api } from "../services/api";
 
-const initialState = {
-  form: {
-    name: '',
-    phone: '',
-  },
-  error: '',
-};
-
-function reducer(state, action) {
-  switch (action.type) {
-    case 'SET_FORM':
-      return { ...state, form: { ...state.form, ...action.payload } };
-    case 'SET_ERROR':
-      return { ...state, error: action.payload };
-    case 'CLEAR_ERROR':
-      return { ...state, error: '' };
-    default:
-      return state;
-  }
-}
-
 const EditContact = ({ contact, onSave, onCancel }) => {
-  const [state, dispatch] = useReducer(reducer, {
-    ...initialState,
-    form: { name: contact.name, phone: contact.phone },
+  // State
+  const [form, setForm] = useState({
+    name: contact.name,
+    phone: contact.phone,
   });
+  const [error, setError] = useState('');
 
   /**
    * Handles form input changes
@@ -53,8 +34,11 @@ const EditContact = ({ contact, onSave, onCancel }) => {
    * @param {string} value - New value for the field
    */
   const handleInputChange = (field, value) => {
-    dispatch({ type: 'SET_FORM', payload: { [field]: value } });
-    if (state.error) dispatch({ type: 'CLEAR_ERROR' });
+    setForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    if (error) setError('');
   };
 
   /**
@@ -66,16 +50,16 @@ const EditContact = ({ contact, onSave, onCancel }) => {
     e.preventDefault();
 
     // Validate form inputs
-    if (!state.form.name.trim() || !state.form.phone.trim()) {
-      dispatch({ type: 'SET_ERROR', payload: "Name and phone number are required" });
+    if (!form.name.trim() || !form.phone.trim()) {
+      setError("Name and phone number are required");
       return;
     }
 
     try {
-      const updated = await api.updateContact(contact.id, state.form);
+      const updated = await api.updateContact(contact.id, form);
       onSave(updated);
     } catch (err) {
-      dispatch({ type: 'SET_ERROR', payload: err.response?.data?.error || "Failed to update contact" });
+      setError(err.response?.data?.error || "Failed to update contact");
       console.error("Error updating contact:", err);
     }
   };
@@ -93,12 +77,12 @@ const EditContact = ({ contact, onSave, onCancel }) => {
             type="text"
             id="name"
             name="name"
-            value={state.form.name}
+            value={form.name}
             onChange={(e) => handleInputChange('name', e.target.value)}
             placeholder="Enter name"
-            className={state.error && !state.form.name.trim() ? "error" : ""}
+            className={error && !form.name.trim() ? "error" : ""}
             aria-label="Contact name"
-            aria-invalid={state.error && !state.form.name.trim()}
+            aria-invalid={error && !form.name.trim()}
             required
           />
         </div>
@@ -110,20 +94,20 @@ const EditContact = ({ contact, onSave, onCancel }) => {
             type="tel"
             id="phone"
             name="phone"
-            value={state.form.phone}
+            value={form.phone}
             onChange={(e) => handleInputChange('phone', e.target.value)}
             placeholder="Enter phone number"
-            className={state.error && !state.form.phone.trim() ? "error" : ""}
+            className={error && !form.phone.trim() ? "error" : ""}
             aria-label="Contact phone"
-            aria-invalid={state.error && !state.form.phone.trim()}
+            aria-invalid={error && !form.phone.trim()}
             required
           />
         </div>
 
         {/* Error Display */}
-        {state.error && (
+        {error && (
           <div className="error-message" role="alert">
-            {state.error}
+            {error}
           </div>
         )}
 

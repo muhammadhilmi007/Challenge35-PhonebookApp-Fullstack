@@ -38,7 +38,7 @@ const MainPage = () => {
    * Load contacts when search or sort parameters change
    */
   useEffect(() => {
-    loadContacts(false);
+    loadContacts(false); // (false) berarti meminta data baru dan (true) berarti meminta data tambahan
   }, [state.sortBy, state.sortOrder, state.search]); // eslint-disable-line
 
   /**

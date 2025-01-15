@@ -11,7 +11,7 @@
  * @component
  */
 
-import { useReducer } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 // Services
 import { api } from "../services/api";
@@ -19,60 +19,43 @@ import { localStorageUtil } from "../services/localStorage";
 // Context
 import { useContactContext } from "../contexts/ContactContext";
 
-const initialState = {
-  form: { name: "", phone: "" },
-  error: "",
-  saving: false
-};
-
-function reducer(state, action) {
-  switch (action.type) {
-    case 'SET_FORM':
-      return { ...state, form: { ...state.form, [action.field]: action.value } };
-    case 'SET_ERROR':
-      return { ...state, error: action.payload };
-    case 'SET_SAVING':
-      return { ...state, saving: action.payload };
-    case 'RESET_FORM':
-      return { ...state, form: { name: "", phone: "" }, error: "" };
-    default:
-      return state;
-  }
-}
-
 const AddContact = () => {
   // Hooks
   const navigate = useNavigate();
   const { handleRefreshContacts } = useContactContext();
-  const [state, dispatch] = useReducer(reducer, initialState);
+  
+  // State
+  const [form, setForm] = useState({ name: "", phone: "" });
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   /**
    * Handles form submission and contact creation
    * Supports offline functionality by storing pending contacts
    * 
-   * @param {Event} e - Form submission event
+   * @param {Event} e - Event submit form
    */
   const saveContact = async (e) => {
     e.preventDefault();
 
     // Validate form inputs
-    if (!state.form.name.trim() || !state.form.phone.trim()) {
-      dispatch({ type: 'SET_ERROR', payload: "Name and phone number are required" });
+    if (!form.name.trim() || !form.phone.trim()) {
+      setError("Name and phone number are required");
       return;
     }
 
     try {
-      dispatch({ type: 'SET_SAVING', payload: true });
-      dispatch({ type: 'SET_ERROR', payload: "" });
+      setSaving(true);
+      setError("");
       
       try {
         // Attempt to save contact to server
-        await api.addContact(state.form);
+        await api.addContact(form);
         handleRefreshContacts();
         navigateBack();
       } catch (err) {
         // Handle offline scenario
-        const newContact = localStorageUtil.addPendingContact(state.form);
+        const newContact = localStorageUtil.addPendingContact(form);
         const currentContacts = localStorageUtil.getAllContacts();
         
         if (!currentContacts.length) {
@@ -83,9 +66,9 @@ const AddContact = () => {
         navigateBack();
       }
     } catch (err) {
-      dispatch({ type: 'SET_ERROR', payload: err.response?.data?.error || "Failed to add contact" });
+      setError(err.response?.data?.error || "Failed to add contact");
     } finally {
-      dispatch({ type: 'SET_SAVING', payload: false });
+      setSaving(false);
     }
   };
 
@@ -123,8 +106,8 @@ const AddContact = () => {
    * @param {string} value - New value for the field
    */
   const handleInputChange = (field, value) => {
-    dispatch({ type: 'SET_FORM', field, value });
-    if (state.error) dispatch({ type: 'SET_ERROR', payload: "" });
+    setForm(prev => ({ ...prev, [field]: value }));
+    if (error) setError("");
   };
 
   return (
@@ -132,9 +115,9 @@ const AddContact = () => {
       <h2>Add Contact</h2>
       
       {/* Error Message */}
-      {state.error && (
+      {error && (
         <p className="error-message" role="alert">
-          {state.error}
+          {error}
         </p>
       )}
 
@@ -144,23 +127,23 @@ const AddContact = () => {
           type="text"
           name="name"
           placeholder="Name"
-          value={state.form.name}
+          value={form.name}
           onChange={(e) => handleInputChange('name', e.target.value)}
           required
           className="add-input"
           aria-label="Contact name"
-          disabled={state.saving}
+          disabled={saving}
         />
         <input
           type="tel"
           name="phone"
           placeholder="Phone"
-          value={state.form.phone}
+          value={form.phone}
           onChange={(e) => handleInputChange('phone', e.target.value)}
           required
           className="add-input"
           aria-label="Contact phone number"
-          disabled={state.saving}
+          disabled={saving}
         />
 
         {/* Form Actions */}
@@ -168,16 +151,16 @@ const AddContact = () => {
           <button 
             type="submit" 
             className="save-button" 
-            disabled={state.saving}
-            aria-busy={state.saving}
+            disabled={saving}
+            aria-busy={saving}
           >
-            {state.saving ? "Saving..." : "Save"}
+            {saving ? "Saving..." : "Save"}
           </button>
           <button
             type="button"
             className="cancel-button"
             onClick={navigateBack}
-            disabled={state.saving}
+            disabled={saving}
           >
             Cancel
           </button>
