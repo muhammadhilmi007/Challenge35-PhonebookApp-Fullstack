@@ -20,6 +20,9 @@ export const ACTIONS = {
   SET_CONTACTS: 'SET_CONTACTS',
   ADD_MORE_CONTACTS: 'ADD_MORE_CONTACTS',
   CLEAR_CONTACTS: 'CLEAR_CONTACTS',
+  ADD_CONTACT: 'ADD_CONTACT',
+  UPDATE_CONTACT: 'UPDATE_CONTACT',
+  DELETE_CONTACT: 'DELETE_CONTACT',
   
   // Pagination
   SET_PAGE: 'SET_PAGE',
@@ -70,6 +73,12 @@ export function contactReducer(state, action) {
       return { 
         ...state, 
         contacts: [...state.contacts, ...action.payload] 
+      };
+
+    case ACTIONS.ADD_CONTACT:
+      return { 
+        ...state, 
+        contacts: [...state.contacts, action.payload] 
       };
 
     case ACTIONS.CLEAR_CONTACTS:

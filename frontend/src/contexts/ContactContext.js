@@ -11,7 +11,6 @@
 import React, { createContext, useContext, useReducer } from 'react';
 import { contactReducer, ACTIONS } from '../hooks/Reducer';
 import { api } from '../services/api';
-import { localStorageUtil } from '../services/localStorage';
 
 // Create context
 const ContactContext = createContext();
@@ -62,53 +61,50 @@ export function ContactProvider({ children }) {
 
     try {
       const page = loadMore ? state.page + 1 : 1;
-      const pendingContacts = localStorageUtil.getPendingContacts();
+      const limit = 10;
+
+      // Get pending contacts and existing contacts from sessionStorage
+      const pendingContacts = JSON.parse(sessionStorage.getItem('pendingContacts') || '[]');
+      const existingContacts = JSON.parse(sessionStorage.getItem('existingContacts') || '[]');
       
       try {
-        // Try to fetch from server
         const response = await api.getContacts(
           page,
-          100,
+          limit,
           state.sortBy,
           state.sortOrder,
           state.search
         );
 
         if (Array.isArray(response.phonebooks)) {
-          // Filter out duplicates
-          const existingIds = new Set(pendingContacts.map(contact => contact.id));
-          const uniqueServerContacts = response.phonebooks.filter(contact => {
-            const isDuplicate = existingIds.has(contact.id.toString());
-            if (!isDuplicate) {
-              existingIds.add(contact.id.toString());
-            }
-            return !isDuplicate;
-          });
-
-          // Save to localStorage and update state
-          localStorageUtil.saveAllContacts(uniqueServerContacts);
-          const allContacts = [...pendingContacts, ...uniqueServerContacts];
-
+          // Save server contacts to sessionStorage
+          if (!loadMore) {
+            sessionStorage.setItem('existingContacts', JSON.stringify(response.phonebooks));
+          } else {
+            const currentExisting = JSON.parse(sessionStorage.getItem('existingContacts') || '[]');
+            sessionStorage.setItem('existingContacts', JSON.stringify([...currentExisting, ...response.phonebooks]));
+          }
+          
           if (loadMore) {
-            // Add new contacts to existing list
-            const existingStateIds = new Set(state.contacts.map(c => c.id.toString()));
-            const uniqueNewContacts = allContacts.filter(contact => 
-              !existingStateIds.has(contact.id.toString())
-            );
+            // For infinite scroll, add new contacts and resort
+            const allContacts = [...state.contacts, ...response.phonebooks];
+            const sortedContacts = sortAndFilterContacts(allContacts);
             
             dispatch({
               type: ACTIONS.SET_CONTACTS,
-              payload: [...state.contacts, ...uniqueNewContacts],
+              payload: sortedContacts,
             });
           } else {
-            // Replace entire contact list
+            // For initial load, combine all contacts and sort
+            const allContacts = [...pendingContacts, ...response.phonebooks];
+            const sortedContacts = sortAndFilterContacts(allContacts);
+
             dispatch({
               type: ACTIONS.SET_CONTACTS,
-              payload: allContacts,
+              payload: sortedContacts,
             });
           }
 
-          // Update pagination and online status
           dispatch({
             type: ACTIONS.SET_HAS_MORE,
             payload: page < response.pages,
@@ -117,28 +113,70 @@ export function ContactProvider({ children }) {
           dispatch({ type: ACTIONS.SET_OFFLINE, payload: false });
         }
       } catch (error) {
-        // Handle offline mode
-        console.log('Server unavailable, loading from localStorage');
-        const offlineContacts = localStorageUtil.getAllContacts();
-        const existingIds = new Set(pendingContacts.map(contact => contact.id));
-        const uniqueOfflineContacts = offlineContacts.filter(contact => {
-          const isDuplicate = existingIds.has(contact.id.toString());
-          if (!isDuplicate) {
-            existingIds.add(contact.id.toString());
-          }
-          return !isDuplicate;
-        });
-
-        if (loadMore && state.isOffline) {
-          dispatch({ type: ACTIONS.SET_HAS_MORE, payload: false });
-        } else {
+        console.log('Server unavailable, using sessionStorage data');
+        
+        // Get the full list of contacts
+        const allContacts = [...pendingContacts, ...existingContacts];
+        const sortedContacts = sortAndFilterContacts(allContacts);
+        
+        if (!loadMore) {
+          // For initial load in offline mode
+          const initialBatch = sortedContacts.slice(0, limit);
           dispatch({
             type: ACTIONS.SET_CONTACTS,
-            payload: [...pendingContacts, ...uniqueOfflineContacts],
+            payload: initialBatch,
           });
-          dispatch({ type: ACTIONS.SET_HAS_MORE, payload: false });
-          dispatch({ type: ACTIONS.SET_OFFLINE, payload: true });
+          
+          // Store remaining contacts for infinite scroll
+          sessionStorage.setItem('remainingOfflineContacts', 
+            JSON.stringify(sortedContacts.slice(limit))
+          );
+          
+          // Set hasMore if there are more contacts
+          dispatch({ 
+            type: ACTIONS.SET_HAS_MORE, 
+            payload: sortedContacts.length > limit 
+          });
+        } else {
+          // For infinite scroll in offline mode
+          const remainingContacts = JSON.parse(
+            sessionStorage.getItem('remainingOfflineContacts') || '[]'
+          );
+          
+          if (remainingContacts.length > 0) {
+            // Get next batch
+            const nextBatch = remainingContacts.slice(0, limit);
+            const newRemaining = remainingContacts.slice(limit);
+            
+            // Combine with existing contacts
+            const updatedContacts = [...state.contacts, ...nextBatch];
+            dispatch({
+              type: ACTIONS.SET_CONTACTS,
+              payload: updatedContacts,
+            });
+            
+            // Update remaining contacts
+            sessionStorage.setItem('remainingOfflineContacts', 
+              JSON.stringify(newRemaining)
+            );
+            
+            // Update hasMore
+            dispatch({ 
+              type: ACTIONS.SET_HAS_MORE, 
+              payload: newRemaining.length > 0 
+            });
+            
+            // Update page
+            dispatch({ 
+              type: ACTIONS.SET_PAGE, 
+              payload: page 
+            });
+          } else {
+            dispatch({ type: ACTIONS.SET_HAS_MORE, payload: false });
+          }
         }
+        
+        dispatch({ type: ACTIONS.SET_OFFLINE, payload: true });
       }
     } catch (err) {
       dispatch({ type: ACTIONS.SET_ERROR, payload: err.message });
@@ -146,6 +184,48 @@ export function ContactProvider({ children }) {
     }
 
     dispatch({ type: ACTIONS.SET_LOADING, payload: false });
+  };
+
+  /**
+   * Add a contact to pending list
+   * @param {Object} contact - Contact to add
+   */
+  const addPendingContact = (contact) => {
+    const pendingContacts = JSON.parse(sessionStorage.getItem('pendingContacts') || '[]');
+    const newContact = {
+      ...contact,
+      id: `pending_${Date.now()}`,
+      status: 'pending'
+    };
+    pendingContacts.unshift(newContact);
+    sessionStorage.setItem('pendingContacts', JSON.stringify(pendingContacts));
+    return newContact;
+  };
+
+  /**
+   * Helper function to sort and filter contacts
+   * @param {Array} contacts - Array of contacts to sort and filter
+   * @returns {Array} Sorted and filtered contacts
+   */
+  const sortAndFilterContacts = (contacts) => {
+    // First sort the contacts
+    const sortedContacts = [...contacts].sort((a, b) => {
+      const aValue = (a[state.sortBy] || '').toString().toLowerCase();
+      const bValue = (b[state.sortBy] || '').toString().toLowerCase();
+      const compareResult = aValue.localeCompare(bValue);
+      return state.sortOrder === 'asc' ? compareResult : -compareResult;
+    });
+
+    // Then filter if search is active
+    if (state.search) {
+      const searchTerm = state.search.toLowerCase();
+      return sortedContacts.filter(contact => 
+        contact.name.toLowerCase().includes(searchTerm) ||
+        contact.phone.toLowerCase().includes(searchTerm)
+      );
+    }
+
+    return sortedContacts;
   };
 
   /**
@@ -219,10 +299,30 @@ export function ContactProvider({ children }) {
   const handleDelete = async (id) => {
     try {
       if (id && typeof id === 'string' && id.startsWith('pending_')) {
-        localStorageUtil.removePendingContact(id);
+        // Remove from pending contacts in sessionStorage
+        const pendingContacts = JSON.parse(sessionStorage.getItem('pendingContacts') || '[]');
+        const updatedPending = pendingContacts.filter(contact => contact.id !== id);
+        sessionStorage.setItem('pendingContacts', JSON.stringify(updatedPending));
       } else if (id) {
-        await api.deleteContact(id);
+        try {
+          await api.deleteContact(id);
+          // If successful, also remove from cached contacts
+          const cachedContacts = JSON.parse(sessionStorage.getItem('existingContacts') || '[]');
+          const updatedCached = cachedContacts.filter(contact => contact.id !== id);
+          sessionStorage.setItem('existingContacts', JSON.stringify(updatedCached));
+        } catch (error) {
+          if (state.isOffline) {
+            // If offline, just remove from cached contacts
+            const cachedContacts = JSON.parse(sessionStorage.getItem('existingContacts') || '[]');
+            const updatedCached = cachedContacts.filter(contact => contact.id !== id);
+            sessionStorage.setItem('existingContacts', JSON.stringify(updatedCached));
+          } else {
+            throw error;
+          }
+        }
       }
+      
+      // Update state
       dispatch({ 
         type: ACTIONS.SET_CONTACTS, 
         payload: state.contacts.filter((contact) => contact.id !== id) 
@@ -240,7 +340,12 @@ export function ContactProvider({ children }) {
    */
   const handleResendSuccess = async (pendingId, savedContact) => {
     const updatedContacts = state.contacts.map(contact =>
-      contact.id === pendingId ? { ...savedContact, status: undefined } : contact
+      contact.id === pendingId ? { 
+        ...savedContact,
+        id: savedContact._id || savedContact.id,
+        sent: true,
+        status: undefined 
+      } : contact
     );
     dispatch({ type: ACTIONS.SET_CONTACTS, payload: updatedContacts });
   };
@@ -262,7 +367,8 @@ export function ContactProvider({ children }) {
     handleEdit,
     handleDelete,
     handleResendSuccess,
-    handleRefreshContacts
+    handleRefreshContacts,
+    addPendingContact
   };
 
   return (

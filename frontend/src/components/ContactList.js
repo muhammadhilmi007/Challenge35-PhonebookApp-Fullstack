@@ -73,14 +73,13 @@ const ContactList = ({ onAvatarUpdate }) => {
       {/* Contact Cards */}
       {state.contacts.map((contact, index) => (
         <div
+          key={contact.id}
           ref={index === state.contacts.length - 1 ? lastContactRef : null}
           className={`contact-list-item ${
             contact.status === "pending" ? "pending" : ""
           }`}
         >
           <ContactCard
-            key={contact.id}
-            no={index + 1}
             contact={contact}
             onEdit={handleEdit}
             onDelete={handleDelete}

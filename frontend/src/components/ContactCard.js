@@ -1,6 +1,6 @@
 /**
  * ContactCard Component
- * 
+ *
  * Displays individual contact information with edit, delete, and avatar update functionality.
  * Features:
  * - Contact information display
@@ -8,7 +8,7 @@
  * - Delete confirmation
  * - Pending contact handling
  * - Avatar display and update
- * 
+ *
  * @component
  * @param {Object} props
  * @param {Object} props.contact - Contact data object
@@ -24,7 +24,6 @@ import React, { useState } from "react";
 import { BsPencilSquare, BsTrash, BsArrowRepeat } from "react-icons/bs";
 // Services
 import { api } from "../services/api";
-import { localStorageUtil } from "../services/localStorage";
 // Context
 import { useContactContext } from "../contexts/ContactContext";
 // Styles
@@ -32,20 +31,20 @@ import "../styles/styles.css";
 
 const ContactCard = ({ contact, onAvatarUpdate }) => {
   // Context and state
-  const { 
-    handleEdit, 
-    handleDelete, 
-    handleResendSuccess, 
-    handleRefreshContacts 
+  const {
+    handleEdit,
+    handleDelete,
+    handleResendSuccess,
+    handleRefreshContacts,
   } = useContactContext();
-  
+
   // State
   const [isEditing, setIsEditing] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
   const [form, setForm] = useState({
     name: contact.name,
     phone: contact.phone,
-    photo: contact.photo
+    photo: contact.photo,
   });
 
   /**
@@ -54,23 +53,24 @@ const ContactCard = ({ contact, onAvatarUpdate }) => {
    */
   const handleResend = async () => {
     try {
-      const isAvailable = await localStorageUtil.isServerAvailable();
-      if (!isAvailable) {
-        alert("Server is not available. Please try again later.");
-        return;
-      }
-
       const savedContact = await api.addContact({
         name: contact.name,
         phone: contact.phone,
-        photo: contact.photo
+        photo: contact.photo,
       });
 
-      localStorageUtil.removePendingContact(contact.id);
-
+      // Update contact in state with new ID and mark as sent
       if (handleResendSuccess) {
-        await handleResendSuccess(contact.id, savedContact);
+        await handleResendSuccess(contact.id, {
+          ...savedContact,
+          sent: true
+        });
       }
+
+      // Remove from pending storage
+      const pendingContacts = JSON.parse(sessionStorage.getItem('pendingContacts') || '[]');
+      const updatedPendingContacts = pendingContacts.filter(c => c.id !== contact.id);
+      sessionStorage.setItem('pendingContacts', JSON.stringify(updatedPendingContacts));
 
       handleRefreshContacts();
     } catch (error) {
@@ -89,7 +89,7 @@ const ContactCard = ({ contact, onAvatarUpdate }) => {
       const updatedContact = {
         ...form,
         id: contact.id,
-        photo: contact.photo
+        photo: contact.photo,
       };
       await handleEdit(contact.id, updatedContact);
       setIsEditing(false);
@@ -112,14 +112,14 @@ const ContactCard = ({ contact, onAvatarUpdate }) => {
 
   /**
    * Handles form input changes
-   * 
+   *
    * @param {string} field - Field name to update
    * @param {string} value - New value for the field
    */
   const handleFormChange = (field, value) => {
-    setForm(prev => ({
+    setForm((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
@@ -129,10 +129,7 @@ const ContactCard = ({ contact, onAvatarUpdate }) => {
       <div className="contact-card">
         {/* Avatar Section */}
         <div className="avatar">
-          <img 
-            src={contact.photo || '/user-avatar.svg'} 
-            alt={contact.name} 
-          />
+          <img src={contact.photo || "/user-avatar.svg"} alt={contact.name} />
         </div>
 
         {/* Edit Form */}
@@ -141,7 +138,7 @@ const ContactCard = ({ contact, onAvatarUpdate }) => {
             <input
               type="text"
               value={form.name}
-              onChange={e => handleFormChange('name', e.target.value)}
+              onChange={(e) => handleFormChange("name", e.target.value)}
               placeholder="Name"
               className="edit-input"
               aria-label="Edit contact name"
@@ -149,7 +146,7 @@ const ContactCard = ({ contact, onAvatarUpdate }) => {
             <input
               type="tel"
               value={form.phone}
-              onChange={e => handleFormChange('phone', e.target.value)}
+              onChange={(e) => handleFormChange("phone", e.target.value)}
               placeholder="Phone"
               className="edit-input"
               aria-label="Edit contact phone"
@@ -166,70 +163,72 @@ const ContactCard = ({ contact, onAvatarUpdate }) => {
 
   return (
     <div className="contact-card">
-      {/* Avatar Section */}
-      <div 
-        className="avatar" 
-        onClick={() => onAvatarUpdate(contact.id)}
-        role="button"
-        aria-label="Update avatar"
-      >
-        <img 
-          src={contact.photo || '/user-avatar.svg'} 
-          alt={`${contact.name}'s avatar`} 
-        />
-      </div>
-
-      {/* Contact Information */}
-      <div className="contact-info">
-        <div className="contact-details">
-          <h3>{contact.name}</h3>
-          <p>{contact.phone}</p>
-          {contact.status === 'pending' && (
-            <span className="pending-badge">Pending</span>
-          )}
+      <div className="card-content">
+        {/* Avatar Section */}
+        <div
+          className="avatar"
+          onClick={() => onAvatarUpdate(contact.id)}
+          role="button"
+          aria-label="Update avatar"
+        >
+          <img
+            src={contact.photo || "/user-avatar.svg"}
+            alt={`${contact.name}'s avatar`}
+          />
         </div>
 
-        {/* Action Buttons */}
-        <div className="contact-actions">
-          {contact.status === 'pending' ? (
-            <button 
-              onClick={handleResend} 
-              aria-label="Resend contact"
-              className="action-button resend"
-            >
-              <BsArrowRepeat />
-            </button>
-          ) : (
-            <button 
-              onClick={() => setIsEditing(true)} 
-              aria-label="Edit contact"
-              className="action-button edit"
-            >
-              <BsPencilSquare />
-            </button>
-          )}
-          <button 
-            onClick={() => setShowDelete(true)} 
-            aria-label="Delete contact"
-            className="action-button delete"
-          >
-            <BsTrash />
-          </button>
-        </div>
-      </div>
+        {/* Contact Information */}
+        <div className="contact-info">
+          <div className="contact-details">
+            <h3>{contact.name}</h3>
+            <p>{contact.phone}</p>
+            {contact.status === "pending" && (
+              <span className="pending-badge">Pending</span>
+            )}
+          </div>
 
-      {/* Delete Confirmation Modal */}
-      {showDelete && (
-        <div className="modal-overlay" role="dialog" aria-modal="true">
-          <div className="confirm-dialog">
-            <p>Are you sure you want to delete this contact?</p>
-            <div className="confirm-buttons">
-              <button onClick={deleteContact}>Yes</button>
-              <button onClick={() => setShowDelete(false)}>No</button>
-            </div>
+          {/* Action Buttons */}
+          <div className="contact-actions">
+            {contact.status === "pending" ? (
+              <button
+                onClick={handleResend}
+                aria-label="Resend contact"
+                className="action-button resend"
+              >
+                <BsArrowRepeat />
+              </button>
+            ) : (
+              <button
+                onClick={() => setIsEditing(true)}
+                aria-label="Edit contact"
+                className="action-button edit"
+              >
+                <BsPencilSquare />
+              </button>
+            )}
+            <button
+              onClick={() => setShowDelete(true)}
+              aria-label="Delete contact"
+              className="action-button delete"
+            >
+              <BsTrash />
+            </button>
           </div>
         </div>
-      )}
+
+        {/* Delete Confirmation Modal */}
+        {showDelete && (
+          <div className="modal-overlay" role="dialog" aria-modal="true">
+            <div className="confirm-dialog">
+              <p>Are you sure you want to delete this contact?</p>
+              <div className="confirm-buttons">
+                <button onClick={deleteContact}>Yes</button>
+                <button onClick={() => setShowDelete(false)}>No</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
