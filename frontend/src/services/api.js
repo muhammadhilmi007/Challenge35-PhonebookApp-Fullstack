@@ -4,7 +4,7 @@ import { localStorageUtil } from '../utils/localStorage';
 /**
  * Konfigurasi API
  */
-const API_URL = 'http://localhost:3001/api';
+const API_URL = 'http://52.220.170.56:3001/api';
 
 /**
  * Memeriksa status server dengan timeout
