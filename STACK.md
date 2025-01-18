@@ -204,4 +204,6 @@ Keywords Tech Stack
 4. Ketika user klik update avatar, maka pindah ke halaman updateavatar
 5. Ketika Search keyword: 'bo', kenapa muncul selain bo dan harus di produce.
 6. Ketika update gambar, maka gambar yang sebelumnya terhapus juga di folder upload nya
+7. Ketika Mode Search dan Sort, dan ketika posisi edit data seharusnya menyesuaikan dengan urutan asceding atau sebaliknya
+8. Kalau mau deploy .env di gitignore, semua variable penting masukkin ke .env
 

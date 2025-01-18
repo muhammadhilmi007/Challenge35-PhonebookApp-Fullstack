@@ -281,6 +281,7 @@ export function ContactProvider({ children }) {
         const match =
           contactToUpdate.name.toLowerCase().includes(state.search.toLowerCase()) ||
           contactToUpdate.phone.toLowerCase().includes(state.search.toLowerCase());
+          handleRefreshContacts();
         if (!match) {
           newContacts = state.contacts.filter((contact) => contact.id !== id);
         }
