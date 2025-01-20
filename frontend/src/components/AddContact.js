@@ -13,15 +13,15 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-// Services
-import { api } from "../services/api";
-// Context
-import { useContactContext } from "../contexts/ContactContext";
+import { useDispatch } from "react-redux";
+// Redux actions
+import { addContact } from "../redux/contactThunks";
+//import { loadContacts } from "../redux/contactThunks";
 
 const AddContact = () => {
   // Hooks
   const navigate = useNavigate();
-  const { handleRefreshContacts } = useContactContext();
+  const dispatch = useDispatch();
   
   // State
   const [form, setForm] = useState({ name: "", phone: "" });
@@ -44,18 +44,20 @@ const AddContact = () => {
     };
 
     try {
-      const response = await api.addContact(newContact);
-      if (response.id) {
-        // Successfully added to server
-        handleRefreshContacts();
+      const result = await dispatch(addContact(newContact));
+      if (result.success) {
+        //dispatch(loadContacts(false));
         navigateBack();
+      } else {
+        setError("Failed to save contact");
       }
     } catch (error) {
-      console.log('Failed to add contact to server, saving to pending');
+      setError("An error occurred while saving the contact");
+      console.error("Error saving contact:", error);
       // Add to pending contacts when offline
       const pendingContact = addPendingContact(newContact);
       if (pendingContact) {
-        handleRefreshContacts();
+        //dispatch(loadContacts(false));
         navigateBack();
       }
     } finally {

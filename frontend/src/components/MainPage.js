@@ -11,35 +11,47 @@
 
 import React, { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useSelector, useDispatch } from "react-redux";
 // Components
 import SearchBar from "./SearchBar";
 import ContactList from "./ContactList";
-// Context
-import { useContactContext } from "../contexts/ContactContext";
+// Redux actions
+import { updateSearch, updateSort, setContacts, clearContacts } from "../redux/contactActions";
+import { loadContacts, editContact, deleteContact } from "../redux/contactThunks";
+// Selectors
+import {
+  selectContacts,
+  selectLoading,
+  selectError,
+  selectHasMore,
+  selectSearch,
+  selectIsOffline,
+  selectSortBy,
+  selectSortOrder
+} from "../redux/contactReducer";
 
 const MainPage = () => {
   // Hooks
   const navigate = useNavigate();
   const location = useLocation();
+  const dispatch = useDispatch();
   
-  // Contact context
-  const { 
-    state, 
-    loadContacts,
-    handleSearch,
-    handleSort,
-    handleEdit,
-    handleDelete,
-    handleResendSuccess,
-    handleRefreshContacts
-  } = useContactContext();
+  // Redux state using selectors
+  const contacts = useSelector(selectContacts);
+  const loading = useSelector(selectLoading);
+  const error = useSelector(selectError);
+  const hasMore = useSelector(selectHasMore);
+  const search = useSelector(selectSearch);
+  const isOffline = useSelector(selectIsOffline);
+  const sortBy = useSelector(selectSortBy);
+  const sortOrder = useSelector(selectSortOrder);
 
   /**
    * Load contacts when search or sort parameters change
    */
   useEffect(() => {
-    loadContacts(false); // (false) berarti meminta data baru dan (true) berarti meminta data tambahan
-  }, [state.sortBy, state.sortOrder, state.search]); // eslint-disable-line
+    dispatch(loadContacts(false));
+  }, [sortBy, sortOrder, search, dispatch]);
 
   /**
    * Manage search parameters in session storage
@@ -74,11 +86,29 @@ const MainPage = () => {
     return () => window.removeEventListener("beforeunload", cleanupStorage);
   }, []);
 
+  // Event handlers
+  const handleSearchChange = (value) => {
+    dispatch(updateSearch(value));
+    if (value) {
+      sessionStorage.setItem('contactSearch', value);
+      sessionStorage.setItem('searchActive', 'true');
+    } else {
+      sessionStorage.removeItem('contactSearch');
+      sessionStorage.removeItem('searchActive');
+    }
+  };
+
+  const handleSortChange = (field, order) => {
+    sessionStorage.setItem('contactSortBy', field);
+    sessionStorage.setItem('contactSortOrder', order);
+    dispatch(updateSort(field, order));
+  };
+
   // Error handling
-  if (state.error) {
+  if (error) {
     return (
       <div className="error" role="alert">
-        Error: {state.error}
+        Error: {error}
       </div>
     );
   }
@@ -87,27 +117,40 @@ const MainPage = () => {
     <div className="app">
       {/* Search and Sort Controls */}
       <SearchBar
-        value={state.search}
-        onChange={handleSearch}
-        onSort={handleSort}
+        value={search}
+        onChange={handleSearchChange}
+        onSort={handleSortChange}
         onAdd={() => navigate("/add")}
       />
 
       {/* Contact List */}
       <ContactList
-        contacts={state.contacts}
-        loading={state.loading}
-        hasMore={state.hasMore && !state.isOffline}
-        onLoadMore={() => loadContacts(true)}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
+        contacts={contacts}
+        loading={loading}
+        hasMore={hasMore && !isOffline}
+        onLoadMore={() => dispatch(loadContacts(true))}
+        onEdit={(id, contact) => dispatch(editContact(id, contact))}
+        onDelete={(id) => dispatch(deleteContact(id))}
         onAvatarUpdate={(id) => navigate(`/avatar/${id}`)}
-        onResendSuccess={handleResendSuccess}
-        onRefreshContacts={handleRefreshContacts}
+        onResendSuccess={(pendingId, savedContact) => {
+          const updatedContacts = contacts.map(contact =>
+            contact.id === pendingId ? {
+              ...savedContact,
+              id: savedContact._id || savedContact.id,
+              sent: true,
+              status: undefined
+            } : contact
+          );
+          dispatch(setContacts(updatedContacts));
+        }}
+        onRefreshContacts={() => {
+          dispatch(clearContacts());
+          dispatch(loadContacts(false));
+        }}
       />
 
       {/* Loading Indicator */}
-      {state.loading && (
+      {loading && (
         <div className="loading" role="status">
           Loading...
         </div>

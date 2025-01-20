@@ -8,28 +8,63 @@
  * - Add contact button
  * 
  * @component
- * @param {Object} props
- * @param {Function} props.onAdd - Callback function to handle adding new contacts
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 // Icons
 import { BsFillPersonPlusFill, BsSearch } from "react-icons/bs";
 import { FaSortAlphaUpAlt, FaSortAlphaDownAlt } from "react-icons/fa";
-// Context
-import { useContactContext } from '../contexts/ContactContext';
+// Redux
+import { updateSearch, updateSort } from '../redux/contactActions';
+import { loadContacts } from '../redux/contactThunks';
+import { selectSortOrder, selectSearch } from '../redux/contactReducer';
 
-const SearchBar = ({ onAdd }) => {
-  // Context and state
-  const { state: contextState, handleSearch, handleSort } = useContactContext();
+const SearchBar = () => {
+  // Hooks
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  
+  // Redux state
+  const sortOrder = useSelector(selectSortOrder);
+  const searchValue = useSelector(selectSearch);
+  const [searchInput, setSearchInput] = useState(searchValue);
+
+  // Update search input when Redux state changes
+  useEffect(() => {
+    setSearchInput(searchValue);
+  }, [searchValue]);
 
   /**
    * Toggles sort order between ascending and descending
    */
   const handleSortClick = () => {
-    const newSortOrder = contextState.sortOrder === 'asc' ? 'desc' : 'asc';
-    handleSort('name', newSortOrder);
+    const newSortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+    dispatch(updateSort('name', newSortOrder));
+    dispatch(loadContacts(false));
   };
+
+  /**
+   * Handles search input changes with debounce
+   */
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchInput !== searchValue) {
+        dispatch(updateSearch(searchInput));
+        if (searchInput) {
+          sessionStorage.setItem('contactSearch', searchInput);
+          sessionStorage.setItem('searchActive', 'true');
+        } else {
+          sessionStorage.removeItem('contactSearch');
+          sessionStorage.removeItem('searchActive');
+        }
+        dispatch(loadContacts(false));
+      }
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timer);
+  }, [searchInput, dispatch, searchValue]);
 
   return (
     <div className="search-bar">
@@ -37,9 +72,9 @@ const SearchBar = ({ onAdd }) => {
       <button 
         onClick={handleSortClick} 
         className="sort-button"
-        aria-label={`Sort ${contextState.sortOrder === 'asc' ? 'descending' : 'ascending'}`}
+        aria-label={`Sort ${sortOrder === 'asc' ? 'descending' : 'ascending'}`}
       >
-        {contextState.sortOrder === 'asc' ? <FaSortAlphaDownAlt /> : <FaSortAlphaUpAlt />}
+        {sortOrder === 'asc' ? <FaSortAlphaDownAlt /> : <FaSortAlphaUpAlt />}
       </button>
 
       {/* Search Input */}
@@ -48,8 +83,8 @@ const SearchBar = ({ onAdd }) => {
         <input
           type="text"
           placeholder="Search contacts..."
-          value={contextState.search}
-          onChange={(e) => handleSearch(e.target.value)}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
           aria-label="Search contacts"
         />
       </div>
@@ -57,7 +92,7 @@ const SearchBar = ({ onAdd }) => {
       {/* Add Contact Button */}
       <button 
         className="add-button" 
-        onClick={onAdd}
+        onClick={() => navigate('/add')}
         aria-label="Add new contact"
       >
         <BsFillPersonPlusFill />

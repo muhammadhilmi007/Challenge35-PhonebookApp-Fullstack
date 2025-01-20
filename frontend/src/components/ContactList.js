@@ -8,26 +8,22 @@
  * - Contact card rendering
  *
  * @component
- * @param {Object} props
- * @param {Function} props.onAvatarUpdate - Callback for updating contact avatar
  */
 
 import React, { useEffect, useRef } from "react";
+import { useSelector, useDispatch } from "react-redux";
 // Components
 import ContactCard from "./ContactCard";
-// Context
-import { useContactContext } from "../contexts/ContactContext";
+// Redux
+import { loadContacts } from "../redux/contactThunks";
+import { selectContacts, selectLoading, selectHasMore } from "../redux/contactReducer";
 
-const ContactList = ({ onAvatarUpdate }) => {
-  // Context
-  const {
-    state,
-    loadContacts,
-    handleEdit,
-    handleDelete,
-    handleResendSuccess,
-    handleRefreshContacts,
-  } = useContactContext();
+const ContactList = () => {
+  // Hooks
+  const dispatch = useDispatch();
+  const contacts = useSelector(selectContacts);
+  const loading = useSelector(selectLoading);
+  const hasMore = useSelector(selectHasMore);
 
   // Ref for infinite scroll
   const lastContactRef = useRef();
@@ -46,8 +42,8 @@ const ContactList = ({ onAvatarUpdate }) => {
     };
 
     const observer = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting && state.hasMore) {
-        loadContacts(true);
+      if (entries[0].isIntersecting && hasMore && !loading) {
+        dispatch(loadContacts(true));
       }
     }, observerOptions);
 
@@ -55,12 +51,12 @@ const ContactList = ({ onAvatarUpdate }) => {
 
     // Cleanup observer on unmount
     return () => observer.disconnect();
-  }, [state.hasMore, loadContacts]);
+  }, [hasMore, loading, dispatch]);
 
   /**
    * Render empty state when no contacts are available
    */
-  if (!state.contacts.length) {
+  if (!contacts.length) {
     return (
       <div className="contact-list-empty" role="status">
         <p>No contacts available</p>
@@ -71,27 +67,20 @@ const ContactList = ({ onAvatarUpdate }) => {
   return (
     <div className="contact-list">
       {/* Contact Cards */}
-      {state.contacts.map((contact, index) => (
+      {contacts.map((contact, index) => (
         <div
           key={contact.id}
-          ref={index === state.contacts.length - 1 ? lastContactRef : null}
+          ref={index === contacts.length - 1 ? lastContactRef : null}
           className={`contact-list-item ${
             contact.status === "pending" ? "pending" : ""
           }`}
         >
-          <ContactCard
-            contact={contact}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onAvatarUpdate={onAvatarUpdate}
-            onResendSuccess={handleResendSuccess}
-            onRefreshContacts={handleRefreshContacts}
-          />
+          <ContactCard contact={contact} />
         </div>
       ))}
 
       {/* Loading State */}
-      {state.hasMore && (
+      {hasMore && (
         <div className="loading-more" role="status">
           Loading more...
         </div>

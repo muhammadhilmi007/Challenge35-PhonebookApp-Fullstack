@@ -14,10 +14,11 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
 // Services
 import { api } from "../services/api";
-// Context
-import { useContactContext } from "../contexts/ContactContext";
+// Redux actions
+import { updateAvatar } from "../redux/contactThunks";
 
 // Constants
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -27,7 +28,7 @@ const AvatarUpload = () => {
   // Hooks
   const { id } = useParams();
   const navigate = useNavigate();
-  const { handleRefreshContacts } = useContactContext();
+  const dispatch = useDispatch();
   const fileInputRef = useRef(null);
 
   // State
@@ -103,9 +104,12 @@ const AvatarUpload = () => {
       const formData = new FormData();
       formData.append("photo", file);
 
-      await api.updateAvatar(id, formData);
-      handleRefreshContacts();
-      navigate("/");
+      const result = await dispatch(updateAvatar(id, formData));
+      if (result.success) {
+        navigate("/");
+      } else {
+        setError(result.error || "Failed to upload avatar");
+      }
     } catch (err) {
       setError("Failed to upload avatar");
       console.error("Error uploading avatar:", err);

@@ -12,31 +12,24 @@
  * @component
  * @param {Object} props
  * @param {Object} props.contact - Contact data object
- * @param {Function} props.onAvatarUpdate - Callback for updating avatar
- * @param {Function} props.handleEdit - Callback for editing contact
- * @param {Function} props.handleDelete - Callback for deleting contact
- * @param {Function} props.handleResendSuccess - Callback for resending pending contact
- * @param {Function} props.handleRefreshContacts - Callback to refresh contact list
  */
 
 import React, { useState } from "react";
+import { useDispatch } from "react-redux";
+import { useNavigate } from "react-router-dom";
 // Icons
 import { BsPencilSquare, BsTrash, BsArrowRepeat } from "react-icons/bs";
 // Services
 import { api } from "../services/api";
-// Context
-import { useContactContext } from "../contexts/ContactContext";
+// Redux
+import { editContact, deleteContact, loadContacts } from "../redux/contactThunks";
 // Styles
 import "../styles/styles.css";
 
-const ContactCard = ({ contact, onAvatarUpdate }) => {
-  // Context and state
-  const {
-    handleEdit,
-    handleDelete,
-    handleResendSuccess,
-    handleRefreshContacts,
-  } = useContactContext();
+const ContactCard = ({ contact }) => {
+  // Hooks
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   // State
   const [isEditing, setIsEditing] = useState(false);
@@ -53,26 +46,19 @@ const ContactCard = ({ contact, onAvatarUpdate }) => {
    */
   const handleResend = async () => {
     try {
-      const savedContact = await api.addContact({
+      await api.addContact({
         name: contact.name,
         phone: contact.phone,
         photo: contact.photo,
       });
-
-      // Update contact in state with new ID and mark as sent
-      if (handleResendSuccess) {
-        await handleResendSuccess(contact.id, {
-          ...savedContact,
-          sent: true
-        });
-      }
 
       // Remove from pending storage
       const pendingContacts = JSON.parse(sessionStorage.getItem('pendingContacts') || '[]');
       const updatedPendingContacts = pendingContacts.filter(c => c.id !== contact.id);
       sessionStorage.setItem('pendingContacts', JSON.stringify(updatedPendingContacts));
 
-      handleRefreshContacts();
+      // Update state
+      dispatch(loadContacts(false));
     } catch (error) {
       console.error("Error resending contact:", error);
       alert("Failed to resend contact. Please try again.");
@@ -91,7 +77,7 @@ const ContactCard = ({ contact, onAvatarUpdate }) => {
         id: contact.id,
         photo: contact.photo,
       };
-      await handleEdit(contact.id, updatedContact);
+      await dispatch(editContact(contact.id, updatedContact));
       setIsEditing(false);
     } catch (error) {
       console.error("Error updating contact:", error);
@@ -101,9 +87,9 @@ const ContactCard = ({ contact, onAvatarUpdate }) => {
   /**
    * Handles contact deletion with confirmation
    */
-  const deleteContact = async () => {
+  const deleteContactHandler = async () => {
     try {
-      await handleDelete(contact.id);
+      await dispatch(deleteContact(contact.id));
       setShowDelete(false);
     } catch (error) {
       console.error("Error deleting contact:", error);
@@ -167,7 +153,7 @@ const ContactCard = ({ contact, onAvatarUpdate }) => {
         {/* Avatar Section */}
         <div
           className="avatar"
-          onClick={() => onAvatarUpdate(contact.id)}
+          onClick={() => navigate(`/avatar/${contact.id}`)}
           role="button"
           aria-label="Update avatar"
         >
@@ -222,7 +208,7 @@ const ContactCard = ({ contact, onAvatarUpdate }) => {
             <div className="confirm-dialog">
               <p>Are you sure you want to delete this contact?</p>
               <div className="confirm-buttons">
-                <button onClick={deleteContact}>Yes</button>
+                <button onClick={deleteContactHandler}>Yes</button>
                 <button onClick={() => setShowDelete(false)}>No</button>
               </div>
             </div>
