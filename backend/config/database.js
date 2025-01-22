@@ -1,10 +1,15 @@
-// const { Sequelize } = require('sequelize');
-// const config = require('./config.json');
+const { Sequelize } = require('sequelize');
+require('dotenv').config();
 
-// const sequelize = new Sequelize(config.development.database, config.development.username, config.development.password, {
-//   host: config.development.host,
-//   dialect: config.development.dialect,
-//   logging: config.development.logging
-// });
+const sequelize = new Sequelize(
+  process.env.DB_NAME,
+  process.env.DB_USERNAME,
+  process.env.DB_PASSWORD,
+  {
+    host: process.env.DB_HOST,
+    dialect: process.env.DB_DIALECT,
+    logging: process.env.DB_LOGGING === 'true'
+  }
+);
 
-// module.exports = sequelize;
+module.exports = sequelize;

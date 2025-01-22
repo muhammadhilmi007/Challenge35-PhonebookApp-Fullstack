@@ -1,7 +1,7 @@
 // Import modul-modul yang diperlukan
 const express = require('express');
 const cors = require('cors');
-const sequelize = require('./config/database.config');
+const sequelize = require('./config/database');
 const phonebookRoutes = require('./routes/phonebookRoutes');
 const apiContact = require('./routes/apiContact');
 

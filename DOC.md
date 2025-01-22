@@ -1,117 +1,141 @@
 # Dokumentasi Alur Proses Aplikasi Phonebook
 
-## Penjelasan useContext dan useReducer
+## Penjelasan Redux Toolkit
 
-### useContext
-useContext adalah fitur React yang memungkinkan sharing state dan fungsi-fungsi antar komponen tanpa perlu prop drilling. Dalam aplikasi ini, ContactContext digunakan untuk mengelola state global terkait kontak seperti:
-- Daftar kontak
-- Status loading
-- Pengaturan sorting
-- State pencarian
-- Pagination
+Redux Toolkit adalah library resmi untuk manajemen state dalam aplikasi React yang efisien. Ini menyederhanakan penggunaan Redux dengan mengurangi boilerplate code dan menyediakan best practices secara default.
 
-### useReducer
-useReducer adalah state management yang lebih kompleks dibanding useState, cocok untuk state yang memiliki logic kompleks. Dalam aplikasi ini digunakan untuk:
-- Mengelola berbagai tipe aksi (ACTIONS) seperti SET_LOADING, SET_CONTACTS, dll
-- Memisahkan logic state management ke dalam reducer terpisah
-- Mempermudah testing dan maintenance
+### createSlice
+`createSlice` adalah fungsi untuk membuat reducer, actions, dan state dalam satu tempat.
+
+Contoh penggunaan:
+```javascript
+const contactSlice = createSlice({
+  name: "contacts",
+  initialState: {
+    contacts: [],
+    loading: false
+  },
+  reducers: {
+    setContacts: (state, action) => {
+      state.contacts = action.payload;
+    }
+  }
+});
+```
+
+### createAsyncThunk
+`createAsyncThunk` membantu menangani operasi asynchronous seperti API calls.
+
+Contoh penggunaan:
+```javascript
+export const loadContacts = createAsyncThunk(
+  "contacts/loadContacts",
+  async () => {
+    const response = await api.getContacts();
+    return response.data;
+  }
+);
+```
+
+### configureStore
+`configureStore` mengatur store Redux dengan konfigurasi default yang optimal.
+
+Contoh penggunaan:
+```javascript
+const store = configureStore({
+  reducer: {
+    contacts: contactsReducer
+  }
+});
+```
+
+### Selector
+Selector membantu mengambil dan memfilter data dari state Redux.
+
+Contoh penggunaan:
+```javascript
+export const selectContacts = (state) => state.contacts.contacts;
+```
 
 ## Alur Proses Detail
 
 ### 1. Proses `npm start` di React
-1. Command `npm start` dijalankan
+1. Menjalankan perintah `npm start`
 2. Webpack dev server diinisialisasi
-3. File index.js dimuat sebagai entry point
-4. App.js dirender sebagai root component
-5. ContactProvider membungkus aplikasi dan menginisialisasi state global
-6. Halaman utama (MainPage) ditampilkan
+3. Redux store dibuat dengan configureStore
+4. Provider membungkus aplikasi dengan store
+5. Aplikasi mulai dengan state awal yang kosong
 
 ### 2. Proses Menampilkan Halaman Main Page
-1. MainPage component dirender
-2. useContactContext hook dipanggil untuk mengakses state global
-3. useEffect dijalankan untuk load data kontak awal
-4. Reducer dispatch SET_LOADING
-5. API call getContacts dilakukan
-6. Data kontak disimpan ke state melalui SET_CONTACTS
-7. Daftar kontak dirender dalam tabel
+1. Component MainPage dirender
+2. useSelector mengambil data kontak dari store
+3. useEffect memanggil action loadContacts
+4. Loading state ditampilkan selama fetch data
+5. Data kontak ditampilkan dalam tabel setelah berhasil diambil
 
 ### 3. Proses Add Contact
-1. User klik tombol "Add Contact"
-2. Navigate ke halaman add contact form
-3. User mengisi form data kontak
-4. Saat klik "Save":
-   - Form validation dijalankan
-   - API call createContact dipanggil
-   - Jika offline, data disimpan ke pending queue
-   - Reducer update state kontak
-   - Redirect ke halaman utama
-   - Daftar kontak direfresh
+1. User mengisi form kontak baru
+2. Validasi form dijalankan
+3. addContact thunk dipanggil
+4. Jika offline:
+   - Contact disimpan di sessionStorage
+   - Status "pending" ditambahkan
+5. Jika online:
+   - Contact dikirim ke server
+   - Store diupdate dengan kontak baru
 
 ### 4. Proses Edit Contact
-1. User klik "Edit" pada kontak
-2. Data kontak dimuat ke form edit
-3. User modifikasi data
-4. Saat klik "Save":
-   - Validasi form
-   - API call updateContact
-   - State kontak diupdate via reducer
-   - Kembali ke halaman utama dengan data terupdate
+1. Data kontak dimuat ke form
+2. User mengubah data
+3. updateContact thunk dipanggil
+4. State diperbarui dengan data terbaru
+5. UI diupdate otomatis lewat selector
 
 ### 5. Proses Upload Avatar
-1. User klik avatar kontak
-2. File picker dibuka
-3. User pilih file gambar
-4. Validasi file (tipe, ukuran)
-5. Upload gambar ke server
-6. Update data kontak dengan avatar baru
-7. Refresh tampilan dengan avatar baru
+1. User memilih file gambar
+2. File divalidasi (ukuran/tipe)
+3. updateAvatar thunk dipanggil
+4. Progress upload ditampilkan
+5. Avatar diperbarui setelah sukses
 
 ### 6. Proses Delete Contact
-1. User klik "Delete"
-2. Konfirmasi dialog ditampilkan
-3. Jika user konfirmasi:
-   - API call deleteContact
-   - Reducer remove kontak dari state
-   - UI diupdate tanpa kontak yang dihapus
+1. Konfirmasi penghapusan
+2. deleteContact thunk dipanggil
+3. Contact dihapus dari store
+4. UI diupdate otomatis
+5. Feedback diberikan ke user
 
 ### 7. Proses Search Contact
-1. User ketik di search field
-2. debounce function menunda eksekusi
-3. Reducer update search query
-4. API call dengan parameter search
-5. Hasil search update state kontak
-6. Tabel kontak dirender ulang
+1. User mengetik kata kunci
+2. setSearch action dipanggil
+3. Selector memfilter kontak
+4. Hasil search ditampilkan real-time
+5. Pagination disesuaikan dengan hasil
 
 ### 8. Proses Search, Sort, dan Edit
-1. User input search keyword
-2. User klik sort button
-3. Reducer update search dan sort state
-4. API call dengan parameter baru
-5. Data diupdate sesuai search dan sort
-6. Edit berfungsi normal pada hasil filtered
+1. Search dan sort bisa digabung
+2. State diupdate untuk kedua kriteria
+3. Selector menggabungkan filter
+4. Hasil ditampilkan sesuai kriteria
+5. Edit tetap berfungsi normal
 
 ### 9. Proses Edit Simultan
-1. Multiple user bisa edit kontak berbeda
-2. Setiap edit menggunakan ID unik
-3. Conflict detection saat save
-4. Last-write-wins atau merge strategy
-5. UI diupdate real-time
+1. Optimistic update diterapkan
+2. Conflict detection saat save
+3. Error handling untuk konflik
+4. Retry mechanism tersedia
+5. UI selalu konsisten
 
 ### 10. Proses Search dan Sort
-1. User input search keyword
-2. Sort state diupdate saat klik sort
-3. Reducer combine search & sort params
-4. Single API call dengan kedua parameter
-5. Result dirender sesuai kriteria
+1. Kombinasi filter diterapkan
+2. Sort diproses setelah search
+3. Selector memastikan efisiensi
+4. Pagination disesuaikan
+5. Cache hasil untuk performa
 
 ### 11. Proses Search dan Add Contact
-1. User melakukan pencarian
-2. Hasil search ditampilkan
-3. Klik "Add Contact":
-   - State pencarian disimpan
-   - Navigate ke form add
-4. Klik "Cancel":
-   - Kembali ke hasil pencarian sebelumnya
-   - Restore search state
-
-   masih error, offlineFilteredContacts hanya muncul 10 data, seharusnya semua data nya muncul ketika di scroll berdasarkan urutan dan fokus pada fitur offline saja,
+1. Search state dipertahankan
+2. Add contact tidak reset search
+3. New contact masuk ke filter
+4. UI diupdate sesuai filter
+5. Smooth transition antara views
