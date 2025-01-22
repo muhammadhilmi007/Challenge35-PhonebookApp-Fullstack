@@ -12,32 +12,28 @@
  * @component
  * @param {Object} props
  * @param {Object} props.contact - Contact data object
+ * @param {Function} props.onEdit - Callback for editing contact
+ * @param {Function} props.onDelete - Callback for deleting contact
  * @param {Function} props.onAvatarUpdate - Callback for updating avatar
- * @param {Function} props.handleEdit - Callback for editing contact
- * @param {Function} props.handleDelete - Callback for deleting contact
- * @param {Function} props.handleResendSuccess - Callback for resending pending contact
- * @param {Function} props.handleRefreshContacts - Callback to refresh contact list
+ * @param {Function} props.onRefreshContacts - Callback to refresh contact list
  */
 
 import React, { useState } from "react";
+import { useDispatch } from "react-redux";
 // Icons
 import { BsPencilSquare, BsTrash, BsArrowRepeat } from "react-icons/bs";
-// Services
-import { api } from "../services/api";
-// Context
-import { useContactContext } from "../contexts/ContactContext";
+// Redux
+import { resendContact } from "../redux/contactSlice";
 // Styles
 import "../styles/styles.css";
 
-const ContactCard = ({ contact, onAvatarUpdate }) => {
-  // Context and state
-  const {
-    handleEdit,
-    handleDelete,
-    handleResendSuccess,
-    handleRefreshContacts,
-  } = useContactContext();
-
+const ContactCard = ({
+  contact,
+  onEdit,
+  onDelete,
+  onAvatarUpdate,
+  onRefreshContacts,
+}) => {
   // State
   const [isEditing, setIsEditing] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
@@ -46,33 +42,15 @@ const ContactCard = ({ contact, onAvatarUpdate }) => {
     phone: contact.phone,
     photo: contact.photo,
   });
+  const dispatch = useDispatch();
 
   /**
    * Handles resending a pending contact to the server
-   * Removes from pending storage if successful
    */
   const handleResend = async () => {
     try {
-      const savedContact = await api.addContact({
-        name: contact.name,
-        phone: contact.phone,
-        photo: contact.photo,
-      });
-
-      // Update contact in state with new ID and mark as sent
-      if (handleResendSuccess) {
-        await handleResendSuccess(contact.id, {
-          ...savedContact,
-          sent: true
-        });
-      }
-
-      // Remove from pending storage
-      const pendingContacts = JSON.parse(sessionStorage.getItem('pendingContacts') || '[]');
-      const updatedPendingContacts = pendingContacts.filter(c => c.id !== contact.id);
-      sessionStorage.setItem('pendingContacts', JSON.stringify(updatedPendingContacts));
-
-      handleRefreshContacts();
+      await dispatch(resendContact({ contact })).unwrap();
+      onRefreshContacts();
     } catch (error) {
       console.error("Error resending contact:", error);
       alert("Failed to resend contact. Please try again.");
@@ -91,10 +69,10 @@ const ContactCard = ({ contact, onAvatarUpdate }) => {
         id: contact.id,
         photo: contact.photo,
       };
-      await handleEdit(contact.id, updatedContact);
+      await onEdit(contact.id, updatedContact);
       setIsEditing(false);
     } catch (error) {
-      console.error("Error updating contact:", error);
+      console.error("Error updating contact:", error); 
     }
   };
 
@@ -103,7 +81,7 @@ const ContactCard = ({ contact, onAvatarUpdate }) => {
    */
   const deleteContact = async () => {
     try {
-      await handleDelete(contact.id);
+      await onDelete(contact.id);
       setShowDelete(false);
     } catch (error) {
       console.error("Error deleting contact:", error);
@@ -198,37 +176,39 @@ const ContactCard = ({ contact, onAvatarUpdate }) => {
                 <BsArrowRepeat />
               </button>
             ) : (
-              <button
-                onClick={() => setIsEditing(true)}
-                aria-label="Edit contact"
-                className="action-button edit"
-              >
-                <BsPencilSquare />
-              </button>
+              <>
+                <button
+                  onClick={() => setIsEditing(true)}
+                  aria-label="Edit contact"
+                  className="action-button edit"
+                >
+                  <BsPencilSquare />
+                </button>
+                <button
+                  onClick={() => setShowDelete(true)}
+                  aria-label="Delete contact"
+                  className="action-button delete"
+                >
+                  <BsTrash />
+                </button>
+              </>
             )}
-            <button
-              onClick={() => setShowDelete(true)}
-              aria-label="Delete contact"
-              className="action-button delete"
-            >
-              <BsTrash />
-            </button>
           </div>
         </div>
+      </div>
 
-        {/* Delete Confirmation Modal */}
-        {showDelete && (
-          <div className="modal-overlay" role="dialog" aria-modal="true">
-            <div className="confirm-dialog">
-              <p>Are you sure you want to delete this contact?</p>
-              <div className="confirm-buttons">
-                <button onClick={deleteContact}>Yes</button>
-                <button onClick={() => setShowDelete(false)}>No</button>
-              </div>
+      {/* Delete Confirmation Modal */}
+      {showDelete && (
+        <div className="modal-overlay" role="dialog" aria-modal="true">
+          <div className="confirm-dialog">
+            <p>Are you sure you want to delete this contact?</p>
+            <div className="confirm-buttons">
+              <button onClick={deleteContact}>Yes</button>
+              <button onClick={() => setShowDelete(false)}>No</button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

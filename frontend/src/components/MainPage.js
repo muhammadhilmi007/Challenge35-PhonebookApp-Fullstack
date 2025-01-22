@@ -11,35 +11,52 @@
 
 import React, { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useSelector, useDispatch } from "react-redux";
 // Components
 import SearchBar from "./SearchBar";
 import ContactList from "./ContactList";
-// Context
-import { useContactContext } from "../contexts/ContactContext";
+// Redux actions
+import {
+  loadContacts,
+  updateContact,
+  deleteContact,
+  setSearch,
+  setSort,
+  handleResendSuccess,
+  clearContacts
+} from "../redux/contactSlice";
 
 const MainPage = () => {
   // Hooks
   const navigate = useNavigate();
   const location = useLocation();
+  const dispatch = useDispatch();
   
-  // Contact context
-  const { 
-    state, 
-    loadContacts,
-    handleSearch,
-    handleSort,
-    handleEdit,
-    handleDelete,
-    handleResendSuccess,
-    handleRefreshContacts
-  } = useContactContext();
+  // Redux state
+  const {
+    contacts,
+    loading,
+    error,
+    hasMore,
+    search,
+    sortBy,
+    sortOrder,
+    isOffline,
+    page
+  } = useSelector((state) => state.contacts);
 
   /**
    * Load contacts when search or sort parameters change
    */
   useEffect(() => {
-    loadContacts(false); // (false) berarti meminta data baru dan (true) berarti meminta data tambahan
-  }, [state.sortBy, state.sortOrder, state.search]); // eslint-disable-line
+    dispatch(loadContacts({ 
+      page: 1,
+      loadMore: false,
+      sortBy,
+      sortOrder,
+      search
+    }));
+  }, [sortBy, sortOrder, search, dispatch]);
 
   /**
    * Manage search parameters in session storage
@@ -74,11 +91,67 @@ const MainPage = () => {
     return () => window.removeEventListener("beforeunload", cleanupStorage);
   }, []);
 
+  // Event handlers
+  const handleSearchChange = (value) => {
+    dispatch(setSearch(value));
+  };
+
+  const handleSortChange = (field, order) => {
+    dispatch(setSort({ sortBy: field, sortOrder: order }));
+  };
+
+  const handleEditContact = (id, updatedContact) => {
+    dispatch(updateContact({ id, updatedContact }));
+  };
+
+  const handleDeleteContact = (id) => {
+    dispatch(deleteContact(id));
+  };
+
+  const handleLoadMore = () => {
+    if (isOffline) {
+      const offlineContacts = JSON.parse(
+        sessionStorage.getItem("offlineFilteredContacts") || "[]"
+      );
+      const startIndex = contacts.length;
+      const endIndex = startIndex + 10;
+      const nextBatch = offlineContacts.slice(startIndex, endIndex);
+      
+      if (nextBatch.length > 0) {
+        dispatch(loadContacts({
+          loadMore: true,
+          sortBy,
+          sortOrder,
+          search
+        }));
+      }
+    } else {
+      dispatch(loadContacts({
+        page: page + 1,
+        loadMore: true,
+        sortBy,
+        sortOrder,
+        search
+      }));
+    }
+  };
+
+  const handleRefreshContacts = () => {
+    dispatch(clearContacts());
+    dispatch(loadContacts({
+      page: 1,
+      loadMore: false,
+      sortBy,
+      sortOrder,
+      search
+    }));
+  };
+
   // Error handling
-  if (state.error) {
+  if (error) {
     return (
       <div className="error" role="alert">
-        Error: {state.error}
+        Error: {error}
       </div>
     );
   }
@@ -87,27 +160,28 @@ const MainPage = () => {
     <div className="app">
       {/* Search and Sort Controls */}
       <SearchBar
-        value={state.search}
-        onChange={handleSearch}
-        onSort={handleSort}
+        value={search}
+        onChange={handleSearchChange}
+        onSort={handleSortChange}
         onAdd={() => navigate("/add")}
       />
 
       {/* Contact List */}
       <ContactList
-        contacts={state.contacts}
-        loading={state.loading}
-        hasMore={state.hasMore && !state.isOffline}
-        onLoadMore={() => loadContacts(true)}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
+        contacts={contacts}
+        loading={loading}
+        hasMore={hasMore && !isOffline}
+        onLoadMore={handleLoadMore}
+        onEdit={handleEditContact}
+        onDelete={handleDeleteContact}
         onAvatarUpdate={(id) => navigate(`/avatar/${id}`)}
-        onResendSuccess={handleResendSuccess}
+        onResendSuccess={(pendingId, savedContact) => 
+          dispatch(handleResendSuccess({ pendingId, savedContact }))}
         onRefreshContacts={handleRefreshContacts}
       />
 
       {/* Loading Indicator */}
-      {state.loading && (
+      {loading && (
         <div className="loading" role="status">
           Loading...
         </div>

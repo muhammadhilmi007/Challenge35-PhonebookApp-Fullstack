@@ -14,10 +14,11 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
 // Services
 import { api } from "../services/api";
-// Context
-import { useContactContext } from "../contexts/ContactContext";
+// Redux actions
+import { clearContacts, loadContacts } from "../redux/contactSlice";
 
 // Constants
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -27,7 +28,7 @@ const AvatarUpload = () => {
   // Hooks
   const { id } = useParams();
   const navigate = useNavigate();
-  const { handleRefreshContacts } = useContactContext();
+  const dispatch = useDispatch();
   const fileInputRef = useRef(null);
 
   // State
@@ -104,7 +105,17 @@ const AvatarUpload = () => {
       formData.append("photo", file);
 
       await api.updateAvatar(id, formData);
-      handleRefreshContacts();
+      
+      // Refresh contacts list
+      dispatch(clearContacts());
+      dispatch(loadContacts({
+        page: 1,
+        loadMore: false,
+        sortBy: sessionStorage.getItem('contactSortBy') || 'name',
+        sortOrder: sessionStorage.getItem('contactSortOrder') || 'asc',
+        search: sessionStorage.getItem('contactSearch') || ''
+      }));
+      
       navigate("/");
     } catch (err) {
       setError("Failed to upload avatar");
@@ -199,16 +210,16 @@ const AvatarUpload = () => {
           type="file"
           ref={fileInputRef}
           onChange={e => validateAndPreviewFile(e.target.files[0])}
-          accept="image/*"
+          accept={ACCEPTED_FILE_TYPES.join(",")}
           style={{ display: "none" }}
           aria-hidden="true"
         />
 
-        {/* Error Display */}
+        {/* Error Message */}
         {error && (
-          <div className="error-message" role="alert">
+          <p className="error-message" role="alert">
             {error}
-          </div>
+          </p>
         )}
 
         {/* Action Buttons */}

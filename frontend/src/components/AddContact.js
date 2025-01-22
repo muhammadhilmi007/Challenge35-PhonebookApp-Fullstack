@@ -13,15 +13,16 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
 // Services
 import { api } from "../services/api";
-// Context
-import { useContactContext } from "../contexts/ContactContext";
+// Redux actions
+import { addPendingContact, clearContacts, loadContacts } from "../redux/contactSlice";
 
 const AddContact = () => {
   // Hooks
   const navigate = useNavigate();
-  const { handleRefreshContacts } = useContactContext();
+  const dispatch = useDispatch();
   
   // State
   const [form, setForm] = useState({ name: "", phone: "" });
@@ -47,17 +48,27 @@ const AddContact = () => {
       const response = await api.addContact(newContact);
       if (response.id) {
         // Successfully added to server
-        handleRefreshContacts();
+        dispatch(clearContacts());
+        dispatch(loadContacts({
+          loadMore: false,
+          sortBy: sessionStorage.getItem('contactSortBy') || 'name',
+          sortOrder: sessionStorage.getItem('contactSortOrder') || 'asc',
+          search: sessionStorage.getItem('contactSearch') || ''
+        }));
         navigateBack();
       }
     } catch (error) {
       console.log('Failed to add contact to server, saving to pending');
       // Add to pending contacts when offline
-      const pendingContact = addPendingContact(newContact);
-      if (pendingContact) {
-        handleRefreshContacts();
-        navigateBack();
-      }
+      dispatch(clearContacts());
+      dispatch(addPendingContact(newContact));
+      dispatch(loadContacts({
+        loadMore: false,
+        sortBy: sessionStorage.getItem('contactSortBy') || 'name',
+        sortOrder: sessionStorage.getItem('contactSortOrder') || 'asc',
+        search: sessionStorage.getItem('contactSearch') || ''
+      }));
+      navigateBack();
     } finally {
       setSaving(false);
     }
@@ -99,25 +110,6 @@ const AddContact = () => {
   const handleInputChange = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
     if (error) setError("");
-  };
-
-  /**
-   * Adds a pending contact to sessionStorage
-   * 
-   * @param {Object} contact - Contact to add
-   * @returns {Object} Added pending contact
-   */
-  const addPendingContact = (contact) => {
-    const pendingContacts = JSON.parse(sessionStorage.getItem('pendingContacts') || '[]');
-    const newContact = {
-      ...contact,
-      id: `pending_${Date.now()}`,
-      status: 'pending',
-      sent: false
-    };
-    pendingContacts.unshift(newContact);
-    sessionStorage.setItem('pendingContacts', JSON.stringify(pendingContacts));
-    return newContact;
   };
 
   return (

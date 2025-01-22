@@ -9,26 +9,32 @@
  *
  * @component
  * @param {Object} props
+ * @param {Array} props.contacts - List of contacts to display
+ * @param {boolean} props.loading - Loading state
+ * @param {boolean} props.hasMore - Whether there are more contacts to load
+ * @param {Function} props.onLoadMore - Callback for loading more contacts
+ * @param {Function} props.onEdit - Callback for editing a contact
+ * @param {Function} props.onDelete - Callback for deleting a contact
  * @param {Function} props.onAvatarUpdate - Callback for updating contact avatar
+ * @param {Function} props.onResendSuccess - Callback for handling resend success
+ * @param {Function} props.onRefreshContacts - Callback for refreshing contacts
  */
 
 import React, { useEffect, useRef } from "react";
 // Components
 import ContactCard from "./ContactCard";
-// Context
-import { useContactContext } from "../contexts/ContactContext";
 
-const ContactList = ({ onAvatarUpdate }) => {
-  // Context
-  const {
-    state,
-    loadContacts,
-    handleEdit,
-    handleDelete,
-    handleResendSuccess,
-    handleRefreshContacts,
-  } = useContactContext();
-
+const ContactList = ({
+  contacts,
+  loading,
+  hasMore,
+  onLoadMore,
+  onEdit,
+  onDelete,
+  onAvatarUpdate,
+  onResendSuccess,
+  onRefreshContacts,
+}) => {
   // Ref for infinite scroll
   const lastContactRef = useRef();
 
@@ -46,8 +52,8 @@ const ContactList = ({ onAvatarUpdate }) => {
     };
 
     const observer = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting && state.hasMore) {
-        loadContacts(true);
+      if (entries[0].isIntersecting && hasMore && !loading) {
+        onLoadMore();
       }
     }, observerOptions);
 
@@ -55,12 +61,12 @@ const ContactList = ({ onAvatarUpdate }) => {
 
     // Cleanup observer on unmount
     return () => observer.disconnect();
-  }, [state.hasMore, loadContacts]);
+  }, [hasMore, loading, onLoadMore]);
 
   /**
    * Render empty state when no contacts are available
    */
-  if (!state.contacts.length) {
+  if (!contacts.length) {
     return (
       <div className="contact-list-empty" role="status">
         <p>No contacts available</p>
@@ -71,27 +77,27 @@ const ContactList = ({ onAvatarUpdate }) => {
   return (
     <div className="contact-list">
       {/* Contact Cards */}
-      {state.contacts.map((contact, index) => (
+      {contacts.map((contact, index) => (
         <div
           key={contact.id}
-          ref={index === state.contacts.length - 1 ? lastContactRef : null}
+          ref={index === contacts.length - 1 ? lastContactRef : null}
           className={`contact-list-item ${
             contact.status === "pending" ? "pending" : ""
           }`}
         >
           <ContactCard
             contact={contact}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
+            onEdit={onEdit}
+            onDelete={onDelete}
             onAvatarUpdate={onAvatarUpdate}
-            onResendSuccess={handleResendSuccess}
-            onRefreshContacts={handleRefreshContacts}
+            onResendSuccess={onResendSuccess}
+            onRefreshContacts={onRefreshContacts}
           />
         </div>
       ))}
 
       {/* Loading State */}
-      {state.hasMore && (
+      {hasMore && (
         <div className="loading-more" role="status">
           Loading more...
         </div>

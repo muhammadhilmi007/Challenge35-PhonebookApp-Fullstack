@@ -1488,3 +1488,5 @@ const AddContact = ({ onAdd }) => {
 Proses ini memastikan pengalaman pengguna yang mulus dengan mempertahankan state pencarian saat navigasi antar halaman.
 
 {{ ... }}
+
+masih error, offlineFilteredContacts hanya muncul 10 data, seharusnya semua data nya muncul ketika di scroll berdasarkan urutan dan fokus pada fitur offline saja,

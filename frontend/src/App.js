@@ -4,7 +4,7 @@
  * Root component that sets up routing and context providers.
  * Features:
  * - React Router setup
- * - Contact context provider
+ * - Redux store provider
  * - Main routes configuration
  * 
  * Routes:
@@ -18,18 +18,19 @@
 import React from 'react';
 // Routing
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+// Redux
+import { Provider } from 'react-redux';
+import store from './redux/store';
 // Components
 import MainPage from './components/MainPage';
 import AddContact from './components/AddContact';
 import AvatarUpload from './components/AvatarUpload';
-// Context
-import { ContactProvider } from './contexts/ContactContext';
 // Styles
 import './styles/styles.css';
 
 const App = () => {
   return (
-    <ContactProvider>
+    <Provider store={store}>
       <Router>
         <div className="App">
           <Routes>
@@ -53,7 +54,7 @@ const App = () => {
           </Routes>
         </div>
       </Router>
-    </ContactProvider>
+    </Provider>
   );
 };
 

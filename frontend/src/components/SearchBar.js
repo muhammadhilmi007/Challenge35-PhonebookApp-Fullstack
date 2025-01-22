@@ -10,25 +10,27 @@
  * @component
  * @param {Object} props
  * @param {Function} props.onAdd - Callback function to handle adding new contacts
+ * @param {string} props.value - Search input value
+ * @param {Function} props.onChange - Callback for search input changes
+ * @param {Function} props.onSort - Callback for sort changes
  */
 
 import React from 'react';
+import { useSelector } from 'react-redux';
 // Icons
 import { BsFillPersonPlusFill, BsSearch } from "react-icons/bs";
 import { FaSortAlphaUpAlt, FaSortAlphaDownAlt } from "react-icons/fa";
-// Context
-import { useContactContext } from '../contexts/ContactContext';
 
-const SearchBar = ({ onAdd }) => {
-  // Context and state
-  const { state: contextState, handleSearch, handleSort } = useContactContext();
+const SearchBar = ({ onAdd, value, onChange, onSort }) => {
+  // Get sort order from Redux state
+  const sortOrder = useSelector(state => state.contacts.sortOrder);
 
   /**
    * Toggles sort order between ascending and descending
    */
   const handleSortClick = () => {
-    const newSortOrder = contextState.sortOrder === 'asc' ? 'desc' : 'asc';
-    handleSort('name', newSortOrder);
+    const newSortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+    onSort('name', newSortOrder);
   };
 
   return (
@@ -37,9 +39,9 @@ const SearchBar = ({ onAdd }) => {
       <button 
         onClick={handleSortClick} 
         className="sort-button"
-        aria-label={`Sort ${contextState.sortOrder === 'asc' ? 'descending' : 'ascending'}`}
+        aria-label={`Sort ${sortOrder === 'asc' ? 'descending' : 'ascending'}`}
       >
-        {contextState.sortOrder === 'asc' ? <FaSortAlphaDownAlt /> : <FaSortAlphaUpAlt />}
+        {sortOrder === 'asc' ? <FaSortAlphaDownAlt /> : <FaSortAlphaUpAlt />}
       </button>
 
       {/* Search Input */}
@@ -48,8 +50,8 @@ const SearchBar = ({ onAdd }) => {
         <input
           type="text"
           placeholder="Search contacts..."
-          value={contextState.search}
-          onChange={(e) => handleSearch(e.target.value)}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
           aria-label="Search contacts"
         />
       </div>

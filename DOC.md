@@ -113,3 +113,5 @@ useReducer adalah state management yang lebih kompleks dibanding useState, cocok
 4. Klik "Cancel":
    - Kembali ke hasil pencarian sebelumnya
    - Restore search state
+
+   masih error, offlineFilteredContacts hanya muncul 10 data, seharusnya semua data nya muncul ketika di scroll berdasarkan urutan dan fokus pada fitur offline saja,
