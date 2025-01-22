@@ -7,14 +7,19 @@
 
 import axios from 'axios';
 
-// API Configuration
+// API Configuration using environment variables
 const API_CONFIG = {
-  BASE_URL: 'http://localhost:3001/api',
+  BASE_URL: process.env.REACT_APP_API_BASE_URL,
   ENDPOINTS: {
-    CONTACTS: '/phonebooks',
-    AVATAR: '/avatar'
+    CONTACTS: process.env.REACT_APP_API_CONTACTS_ENDPOINT,
+    AVATAR: process.env.REACT_APP_API_AVATAR_ENDPOINT
   }
 };
+
+// Validate required environment variables
+if (!API_CONFIG.BASE_URL || !API_CONFIG.ENDPOINTS.CONTACTS || !API_CONFIG.ENDPOINTS.AVATAR) {
+  throw new Error('Missing required environment variables for API configuration');
+}
 
 /**
  * API service object containing all API interaction methods
@@ -146,29 +151,3 @@ export const api = {
     }
   }
 };
-
-/**
- * API Module Documentation
- * 
- * This module provides a centralized interface for all API interactions using axios.
- * 
- * Features:
- * - Pagination support for contact listing
- * - Sorting and searching capabilities
- * - CRUD operations for contacts
- * - Avatar upload handling
- * 
- * Error Handling:
- * - All methods include try-catch blocks
- * - Errors are logged to console and re-thrown
- * - Consistent error message format
- * 
- * Usage Example:
- * ```javascript
- * // Fetch contacts with pagination
- * const contacts = await api.getContacts(1, 10, 'name', 'asc', 'search');
- * 
- * // Add a new contact
- * const newContact = await api.addContact({ name: 'John', phone: '123' });
- * ```
- */
