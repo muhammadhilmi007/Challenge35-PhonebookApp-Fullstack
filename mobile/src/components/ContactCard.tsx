@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, Alert, ImageSourcePropType } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { ContactCardProps } from '../types';
 
-const API_URL = 'http://192.168.1.9:3001';
+const API_URL = 'http://192.168.1.3:3001';
 const DEFAULT_AVATAR = require('../../assets/default-avatar.png');
 
-const ContactCard = ({ contact, onEdit, onDelete, onAvatarPress }) => {
-  const [imageError, setImageError] = useState(false);
+const ContactCard: React.FC<ContactCardProps> = ({ contact, onEdit, onDelete, onAvatarPress, onResend }) => {
+  const [imageError, setImageError] = useState<boolean>(false);
 
-  const getAvatarSource = () => {
+  const getAvatarSource = (): ImageSourcePropType => {
     if (imageError) {
       return DEFAULT_AVATAR;
     }
@@ -27,7 +28,7 @@ const ContactCard = ({ contact, onEdit, onDelete, onAvatarPress }) => {
     return { uri: `${API_URL}/${photoPath}` };
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = (): void => {
     Alert.alert(
       "Delete Contact",
       "Are you sure you want to delete this contact?",
@@ -50,18 +51,24 @@ const ContactCard = ({ contact, onEdit, onDelete, onAvatarPress }) => {
           }}
         />
       </TouchableOpacity>
-      
       <View style={styles.info}>
         <Text style={styles.name}>{contact.name}</Text>
         <Text style={styles.phone}>{contact.phone}</Text>
+        {contact.status === 'pending' && (
+          <Text style={styles.pendingText}>Pending</Text>
+        )}
       </View>
-      
       <View style={styles.actions}>
+        {contact.status === 'pending' && onResend && (
+          <TouchableOpacity onPress={onResend} style={styles.actionButton}>
+            <Ionicons name="refresh" size={24} color="#34C759" />
+          </TouchableOpacity>
+        )}
         <TouchableOpacity onPress={onEdit} style={styles.actionButton}>
-          <Ionicons name="pencil" size={20} color="#4a90e2" />
+          <Ionicons name="pencil" size={24} color="#007AFF" />
         </TouchableOpacity>
         <TouchableOpacity onPress={confirmDelete} style={styles.actionButton}>
-          <Ionicons name="trash-outline" size={20} color="#e74c3c" />
+          <Ionicons name="trash" size={24} color="#FF3B30" />
         </TouchableOpacity>
       </View>
     </View>
@@ -74,17 +81,16 @@ const styles = StyleSheet.create({
     padding: 15,
     backgroundColor: '#fff',
     borderRadius: 10,
-    marginHorizontal: 15,
     marginVertical: 5,
+    marginHorizontal: 10,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
-    alignItems: 'center',
   },
   avatarContainer: {
     marginRight: 15,
@@ -93,20 +99,24 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#e1e1e1',
   },
   info: {
     flex: 1,
+    justifyContent: 'center',
   },
   name: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#2c3e50',
+    fontWeight: 'bold',
     marginBottom: 4,
   },
   phone: {
     fontSize: 14,
-    color: '#7f8c8d',
+    color: '#666',
+  },
+  pendingText: {
+    fontSize: 12,
+    color: '#FF9500',
+    marginTop: 2,
   },
   actions: {
     flexDirection: 'row',
@@ -114,7 +124,6 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     padding: 8,
-    marginLeft: 8,
   },
 });
 
