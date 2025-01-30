@@ -1,105 +1,79 @@
 import axios from 'axios';
 import { Contact, ContactsResponse } from '../types';
 
-// API Configuration
 export const API_URL = 'http://192.168.1.3:3001/api';
 export const API_BASE_URL = 'http://192.168.1.3:3001';
 export const DEFAULT_AVATAR = '/user-avatar.svg';
 export const IMAGE_QUALITY = 0.5;
-export const IMAGE_ASPECT = [1, 1] as [number, number];
+export const IMAGE_ASPECT: [number, number] = [1, 1];
 
 type SortOrder = 'asc' | 'desc';
 
-export const getContacts = async (
-  page: number = 1,
-  limit: number = 10,
-  sortBy: string = 'name',
-  sortOrder: SortOrder = 'asc',
-  search: string = ''
-): Promise<ContactsResponse> => {
-  try {
-    const response = await axios.get<ContactsResponse>(`${API_URL}/phonebooks`, {
-      params: { page, limit, sortBy, sortOrder, name: search }
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching contacts:', error);
-    throw error;
-  }
+const handleError = (operation: string) => (error: unknown) => {
+  console.error(`Error ${operation}:`, error);
+  throw error;
 };
+
+const createFormData = (avatar: string, id?: number): FormData => {
+  const formData = new FormData();
+  const filename = avatar.split('/').pop() || '';
+  const ext = filename.split('.').pop() || 'jpg';
+  
+  formData.append('photo', {
+    uri: avatar,
+    type: `image/${ext}`,
+    name: id ? `avatar_${id}.${ext}` : filename,
+  } as any);
+  
+  return formData;
+};
+
+export const getContacts = async (
+  page = 1,
+  limit = 10,
+  sortBy = 'name',
+  sortOrder: SortOrder = 'asc',
+  search = ''
+): Promise<ContactsResponse> =>
+  axios.get<ContactsResponse>(`${API_URL}/phonebooks`, {
+    params: { page, limit, sortBy, sortOrder, name: search }
+  })
+    .then(response => response.data)
+    .catch(handleError('fetching contacts'));
 
 export const addContact = async (contact: Contact): Promise<Contact> => {
   try {
-    // First create contact without avatar
     const response = await axios.post<Contact>(`${API_URL}/phonebooks`, {
       name: contact.name,
       phone: contact.phone,
     });
 
-    // If contact has an avatar, update it separately
     if (contact.avatar && response.data.id) {
-      const formData = new FormData();
-      
-      // Get the filename from the URI
-      const filename = contact.avatar.split('/').pop() || '';
-      const match = /\.(\w+)$/.exec(filename);
-      const ext = match ? match[1] : 'jpg';
-      
-      formData.append('photo', {
-        uri: contact.avatar,
-        type: `image/${ext}`,
-        name: filename,
-      } as any);
-
       await axios.put(
         `${API_URL}/phonebooks/${response.data.id}/avatar`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
+        createFormData(contact.avatar),
+        { headers: { 'Content-Type': 'multipart/form-data' } }
       );
     }
 
     return response.data;
   } catch (error) {
-    console.error('Error adding contact:', error);
-    throw error;
+    return handleError('adding contact')(error);
   }
 };
 
 export const updateContact = async (id: number, contact: Partial<Contact>): Promise<Contact> => {
   try {
-    // Prepare the contact data for update
-    const updateData = {
-      name: contact.name,
-      phone: contact.phone,
-    };
-
-    // Update contact details
     const response = await axios.put<Contact>(
       `${API_URL}/phonebooks/${id}`,
-      updateData
+      { name: contact.name, phone: contact.phone }
     );
 
-    // If avatar is included, update it separately
     if (contact.avatar) {
-      const formData = new FormData();
-      const filename = contact.avatar.split('/').pop() || '';
-      const match = /\.(\w+)$/.exec(filename);
-      const ext = match ? match[1] : 'jpg';
-
-      formData.append('photo', {
-        uri: contact.avatar,
-        type: `image/${ext}`,
-        name: `avatar_${id}.${ext}`,
-      } as any);
-
       try {
         const photoResponse = await axios.put(
           `${API_URL}/phonebooks/${id}/avatar`,
-          formData,
+          createFormData(contact.avatar, id),
           {
             headers: {
               'Content-Type': 'multipart/form-data',
@@ -107,32 +81,20 @@ export const updateContact = async (id: number, contact: Partial<Contact>): Prom
             },
           }
         );
-
-        // Merge the photo update response with the contact update response
-        return {
-          ...response.data,
-          photo: photoResponse.data.photo,
-        };
+        return { ...response.data, photo: photoResponse.data.photo };
       } catch (photoError) {
         console.error('Error updating photo:', photoError);
-        // Return the contact data even if photo update fails
         return response.data;
       }
     }
 
     return response.data;
   } catch (error) {
-    console.error('Error updating contact:', error);
-    throw error;
+    return handleError('updating contact')(error);
   }
 };
 
-export const deleteContact = async (id: string): Promise<boolean> => {
-  try {
-    await axios.delete(`${API_URL}/phonebooks/${id}`);
-    return true;
-  } catch (error) {
-    console.error('Error deleting contact:', error);
-    throw error;
-  }
-};
+export const deleteContact = async (id: string): Promise<boolean> =>
+  axios.delete(`${API_URL}/phonebooks/${id}`)
+    .then(() => true)
+    .catch(handleError('deleting contact'));

@@ -26,12 +26,11 @@ const ContactCard: React.FC<ContactCardProps> = ({
   onStopEditing,
   isEditing 
 }) => {
-  const [imageError, setImageError] = useState<boolean>(false);
-  const [editedName, setEditedName] = useState<string>(contact.name);
-  const [editedPhone, setEditedPhone] = useState<string>(contact.phone);
-  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [imageError, setImageError] = useState(false);
+  const [editedName, setEditedName] = useState(contact.name);
+  const [editedPhone, setEditedPhone] = useState(contact.phone);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Reset edited values when contact changes or editing stops
   useEffect(() => {
     if (!isEditing) {
       setEditedName(contact.name);
@@ -40,14 +39,10 @@ const ContactCard: React.FC<ContactCardProps> = ({
   }, [contact, isEditing]);
 
   const getAvatarSource = useCallback((): ImageSourcePropType => {
-    if (imageError) {
+    if (imageError || !contact.photo || contact.photo === '/user-avatar.svg') {
       return DEFAULT_AVATAR;
     }
     
-    if (!contact.photo || contact.photo === '/user-avatar.svg') {
-      return DEFAULT_AVATAR;
-    }
-
     if (contact.photo.startsWith('http')) {
       return { uri: contact.photo };
     }
@@ -56,7 +51,7 @@ const ContactCard: React.FC<ContactCardProps> = ({
     return { uri: `${API_URL}/${photoPath}` };
   }, [contact.photo, imageError]);
 
-  const confirmDelete = useCallback((): void => {
+  const confirmDelete = useCallback(() => {
     Alert.alert(
       "Delete Contact",
       "Are you sure you want to delete this contact?",
@@ -68,28 +63,26 @@ const ContactCard: React.FC<ContactCardProps> = ({
   }, [onDelete]);
 
   const handleEdit = useCallback(async () => {
-    if (isEditing) {
-      // Validate inputs
-      if (!editedName.trim() || !editedPhone.trim()) {
-        Alert.alert('Error', 'Name and phone number are required');
-        return;
-      }
+    if (!isEditing) {
+      return onStartEditing();
+    }
 
-      setIsSaving(true);
-      try {
-        await onEdit({
-          ...contact,
-          name: editedName.trim(),
-          phone: editedPhone.trim(),
-        });
-      } catch (error) {
-        console.error('Error updating contact:', error);
-        Alert.alert('Error', 'Failed to update contact');
-      } finally {
-        setIsSaving(false);
-      }
-    } else {
-      onStartEditing();
+    if (!editedName.trim() || !editedPhone.trim()) {
+      return Alert.alert('Error', 'Name and phone number are required');
+    }
+
+    setIsSaving(true);
+    try {
+      await onEdit({
+        ...contact,
+        name: editedName.trim(),
+        phone: editedPhone.trim(),
+      });
+    } catch (error) {
+      console.error('Error updating contact:', error);
+      Alert.alert('Error', 'Failed to update contact');
+    } finally {
+      setIsSaving(false);
     }
   }, [isEditing, editedName, editedPhone, contact, onEdit, onStartEditing]);
 
@@ -98,6 +91,71 @@ const ContactCard: React.FC<ContactCardProps> = ({
     setEditedPhone(contact.phone);
     onStopEditing();
   }, [contact, onStopEditing]);
+
+  const renderEditMode = () => (
+    <View style={styles.editContainer}>
+      <TextInput
+        style={styles.input}
+        value={editedName}
+        onChangeText={setEditedName}
+        placeholder="Enter name"
+        autoCapitalize="words"
+        autoFocus={true}
+      />
+      <TextInput
+        style={styles.input}
+        value={editedPhone}
+        onChangeText={setEditedPhone}
+        placeholder="Enter phone number"
+        keyboardType="phone-pad"
+      />
+    </View>
+  );
+
+  const renderViewMode = () => (
+    <>
+      <Text style={styles.name}>{contact.name}</Text>
+      <Text style={styles.phone}>{contact.phone}</Text>
+      {contact.status === 'pending' && (
+        <Text style={styles.pendingText}>Pending</Text>
+      )}
+    </>
+  );
+
+  const renderEditActions = () => (
+    <>
+      <TouchableOpacity onPress={handleCancel} style={styles.actionButton}>
+        <Ionicons name="close" size={24} color="#FF3B30" />
+      </TouchableOpacity>
+      <TouchableOpacity 
+        onPress={handleEdit} 
+        style={styles.actionButton}
+        disabled={isSaving}
+      >
+        {isSaving ? (
+          <ActivityIndicator size="small" color="#34C759" />
+        ) : (
+          <Ionicons name="checkmark" size={24} color="#34C759" />
+        )}
+      </TouchableOpacity>
+    </>
+  );
+
+  const renderViewActions = () => (
+    <>
+      {contact.status === 'pending' && onResend && (
+        <TouchableOpacity onPress={onResend} style={styles.actionButton}>
+          <Ionicons name="refresh" size={24} color="#34C759" />
+        </TouchableOpacity>
+      )}
+      <TouchableOpacity onPress={handleEdit} style={styles.actionButton}>
+        <Ionicons name="pencil" size={24} color="#007AFF" />
+      </TouchableOpacity>
+      <TouchableOpacity onPress={confirmDelete} style={styles.actionButton}>
+        <Ionicons name="trash" size={24} color="#FF3B30" />
+      </TouchableOpacity>
+    </>
+  );
 
   return (
     <View style={styles.card}>
@@ -116,67 +174,10 @@ const ContactCard: React.FC<ContactCardProps> = ({
         />
       </TouchableOpacity>
       <View style={styles.info}>
-        {isEditing ? (
-          <View style={styles.editContainer}>
-            <TextInput
-              style={styles.input}
-              value={editedName}
-              onChangeText={setEditedName}
-              placeholder="Enter name"
-              autoCapitalize="words"
-              autoFocus={true}
-            />
-            <TextInput
-              style={styles.input}
-              value={editedPhone}
-              onChangeText={setEditedPhone}
-              placeholder="Enter phone number"
-              keyboardType="phone-pad"
-            />
-          </View>
-        ) : (
-          <>
-            <Text style={styles.name}>{contact.name}</Text>
-            <Text style={styles.phone}>{contact.phone}</Text>
-            {contact.status === 'pending' && (
-              <Text style={styles.pendingText}>Pending</Text>
-            )}
-          </>
-        )}
+        {isEditing ? renderEditMode() : renderViewMode()}
       </View>
       <View style={styles.actions}>
-        {isEditing ? (
-          <>
-            <TouchableOpacity onPress={handleCancel} style={styles.actionButton}>
-              <Ionicons name="close" size={24} color="#FF3B30" />
-            </TouchableOpacity>
-            <TouchableOpacity 
-              onPress={handleEdit} 
-              style={styles.actionButton}
-              disabled={isSaving}
-            >
-              {isSaving ? (
-                <ActivityIndicator size="small" color="#34C759" />
-              ) : (
-                <Ionicons name="checkmark" size={24} color="#34C759" />
-              )}
-            </TouchableOpacity>
-          </>
-        ) : (
-          <>
-            {contact.status === 'pending' && onResend && (
-              <TouchableOpacity onPress={onResend} style={styles.actionButton}>
-                <Ionicons name="refresh" size={24} color="#34C759" />
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity onPress={handleEdit} style={styles.actionButton}>
-              <Ionicons name="pencil" size={24} color="#007AFF" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={confirmDelete} style={styles.actionButton}>
-              <Ionicons name="trash" size={24} color="#FF3B30" />
-            </TouchableOpacity>
-          </>
-        )}
+        {isEditing ? renderEditActions() : renderViewActions()}
       </View>
     </View>
   );
@@ -191,10 +192,7 @@ const styles = StyleSheet.create({
     marginVertical: 5,
     marginHorizontal: 10,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,

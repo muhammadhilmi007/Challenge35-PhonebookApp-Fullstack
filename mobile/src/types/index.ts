@@ -39,6 +39,7 @@ export interface LoadingProps {
 
 // Navigation Types
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RouteProp } from '@react-navigation/native';
 
 export type RootStackParamList = {
   Home: undefined;
@@ -51,3 +52,5 @@ export type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamL
 export type AddContactScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'AddContact'>;
 export type EditContactScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'EditContact'>;
 export type AvatarScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Avatar'>;
+export type EditContactScreenRouteProp = RouteProp<RootStackParamList, 'EditContact'>;
+export type AvatarScreenRouteProp = RouteProp<RootStackParamList, 'Avatar'>;

@@ -1,8 +1,9 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { Alert } from 'react-native';
-import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { useAppDispatch, useAppSelector } from '../store/contactsSlice';
 import { fetchContacts, removeContact, resendContact, updateContact, addContact } from '../store/contactsSlice';
 import { Contact } from '../types';
+import debounce from 'lodash/debounce';
 
 type SortOrder = 'asc' | 'desc';
 
@@ -21,6 +22,23 @@ interface UseContactsReturn {
   handleUpdateContact: (id: string, contact: Partial<Contact>) => Promise<boolean>;
   handleAddContact: (contact: Omit<Contact, 'id'>) => Promise<boolean>;
   isOffline: boolean;
+}
+
+export function useDebounce<T>(callback: (value: T) => void, delay: number = 200) {
+  const debouncedCallback = useCallback(
+    debounce((value: T) => {
+      callback(value);
+    }, delay),
+    [callback, delay]
+  );
+
+  useEffect(() => {
+    return () => {
+      debouncedCallback.cancel();
+    };
+  }, [debouncedCallback]);
+
+  return debouncedCallback;
 }
 
 export const useContacts = (): UseContactsReturn => {

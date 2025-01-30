@@ -19,10 +19,9 @@ import { faSortAlphaDown, faSortAlphaUp, faUserPlus, faCirclePlus } from '@forta
 import ContactCard from '../components/ContactCard';
 import SearchBar from '../components/SearchBar';
 import Loading from '../components/Loading';
-import { useContacts } from '../hooks/useContacts';
-import { useDebounce } from '../hooks/useDebounce';
+import { useContacts, useDebounce } from '../hooks/useContacts';
 import { useFocusEffect } from '@react-navigation/native';
-import { HomeScreenNavigationProp } from '../types/navigation';
+import { HomeScreenNavigationProp } from '../types/index';
 import { Contact } from '../types';
 import contactHelpers from '../helpers/contactHelpers';
 

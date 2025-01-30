@@ -10,10 +10,9 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
 import { useContacts } from '../hooks/useContacts';
 import Loading from '../components/Loading';
-import { EditContactScreenNavigationProp, EditContactScreenRouteProp } from '../types/navigation';
+import { EditContactScreenNavigationProp, EditContactScreenRouteProp } from '../types/index';
 import { API_URL } from '../services/api';
 
 const DEFAULT_AVATAR = require('../../assets/default-avatar.png');

@@ -14,7 +14,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
-import { AvatarScreenNavigationProp, AvatarScreenRouteProp } from '../types/navigation';
+import { AvatarScreenNavigationProp, AvatarScreenRouteProp } from '../types/index';
 import Loading from '../components/Loading';
 import { useContacts } from '../hooks/useContacts';
 import { API_BASE_URL, DEFAULT_AVATAR as DEFAULT_AVATAR_PATH, IMAGE_QUALITY, IMAGE_ASPECT } from '../services/api';

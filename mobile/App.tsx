@@ -8,7 +8,7 @@ import HomeScreen from './src/screens/HomeScreen';
 import AddContactScreen from './src/screens/AddContactScreen';
 import EditContactScreen from './src/screens/EditContactScreen';
 import AvatarScreen from './src/screens/AvatarScreen';
-import { RootStackParamList } from './src/types/navigation';
+import { RootStackParamList } from './src/types/index';
 import { store } from './src/store/store';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
