@@ -30,6 +30,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<TextInput>(null);
+  console.log('Submit Search', value);
 
   const handleClear = () => {
     onChangeText('');

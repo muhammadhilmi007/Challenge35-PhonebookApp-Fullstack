@@ -1490,3 +1490,5 @@ Proses ini memastikan pengalaman pengguna yang mulus dengan mempertahankan state
 {{ ... }}
 
 masih error, offlineFilteredContacts hanya muncul 10 data, seharusnya semua data nya muncul ketika di scroll berdasarkan urutan dan fokus pada fitur offline saja,
+
+perbaiki fitur update avatar, ketika user update avatar maka langsung tampil gambar avatarnya

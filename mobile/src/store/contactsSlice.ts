@@ -3,7 +3,7 @@ import { getContacts, deleteContact, addContact as apiAddContact, updateContact 
 import { Contact } from '../types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios'; // Import axios
-import { API_URL } from '../config'; // Import API_URL
+import { API_URL } from '../services/api'; // Import API_URL
 
 interface ContactsState {
   phonebooks: Contact[];
@@ -14,6 +14,7 @@ interface ContactsState {
   error: string | null;
   isOffline: boolean;
   avatarLoading: boolean;
+  currentSortOrder: 'asc' | 'desc';
 }
 
 const initialState: ContactsState = {
@@ -25,6 +26,7 @@ const initialState: ContactsState = {
   error: null,
   isOffline: false,
   avatarLoading: false,
+  currentSortOrder: 'asc',
 };
 
 type SortOrder = 'asc' | 'desc';
@@ -41,11 +43,12 @@ const storageHelpers = {
     }
   },
 
-  addToPendingContacts: async (contact: Contact) => {
+  addToPendingContacts: async (contact: Contact, sortOrder: SortOrder = 'asc') => {
     try {
       const pendingContacts = await storageHelpers.getPendingContacts();
-      pendingContacts.unshift(contact);
-      await AsyncStorage.setItem('pendingContacts', JSON.stringify(pendingContacts));
+      pendingContacts.push(contact);
+      const sortedContacts = contactHelpers.sortContacts(pendingContacts, sortOrder);
+      await AsyncStorage.setItem('pendingContacts', JSON.stringify(sortedContacts));
     } catch (error) {
       console.error('Error adding to pending contacts:', error);
     }
@@ -60,6 +63,51 @@ const storageHelpers = {
       console.error('Error removing pending contact:', error);
     }
   },
+
+  getCachedContacts: async (): Promise<{ contacts: Contact[]; page: number; }> => {
+    try {
+      const cachedData = await AsyncStorage.getItem('cachedContacts');
+      if (cachedData) {
+        return JSON.parse(cachedData);
+      }
+      return { contacts: [], page: 1 };
+    } catch (error) {
+      console.error('Error getting cached contacts:', error);
+      return { contacts: [], page: 1 };
+    }
+  },
+
+  cacheContacts: async (contacts: Contact[], page: number) => {
+    try {
+      const existingCache = await storageHelpers.getCachedContacts();
+      let updatedContacts: Contact[] = [];
+
+      if (page === 1) {
+        // For first page, replace existing cache
+        updatedContacts = contacts;
+      } else {
+        // For subsequent pages, append to existing cache
+        const existingIds = new Set(existingCache.contacts.map(c => c.id));
+        const newContacts = contacts.filter(c => !existingIds.has(c.id));
+        updatedContacts = [...existingCache.contacts, ...newContacts];
+      }
+
+      await AsyncStorage.setItem('cachedContacts', JSON.stringify({
+        contacts: updatedContacts,
+        page: Math.max(existingCache.page, page)
+      }));
+    } catch (error) {
+      console.error('Error caching contacts:', error);
+    }
+  },
+
+  clearCache: async () => {
+    try {
+      await AsyncStorage.removeItem('cachedContacts');
+    } catch (error) {
+      console.error('Error clearing cache:', error);
+    }
+  }
 };
 
 // Contact Helper Functions
@@ -87,8 +135,17 @@ const contactHelpers = {
     sent: false,
   }),
 
-  // Helper to deduplicate contacts
-  deduplicateContacts: (contacts: Contact[]): Contact[] => {
+  sortContacts: (contacts: Contact[], sortOrder: SortOrder = 'asc'): Contact[] => {
+    return [...contacts].sort((a, b) => {
+      const nameA = a.name.toLowerCase();
+      const nameB = b.name.toLowerCase();
+      return sortOrder === 'asc' 
+        ? nameA.localeCompare(nameB)
+        : nameB.localeCompare(nameA);
+    });
+  },
+
+  deduplicateContacts: (contacts: Contact[], sortOrder: SortOrder = 'asc'): Contact[] => {
     const seen = new Map<string, Contact>();
     
     // Process contacts in reverse to keep the newest version
@@ -99,7 +156,8 @@ const contactHelpers = {
       }
     }
     
-    return Array.from(seen.values()).reverse();
+    const uniqueContacts = Array.from(seen.values());
+    return contactHelpers.sortContacts(uniqueContacts, sortOrder);
   }
 };
 
@@ -122,24 +180,54 @@ export const fetchContacts = createAsyncThunk(
       const pendingContacts = await storageHelpers.getPendingContacts();
       const response = await getContacts(page, limit, sortBy, sortOrder, search);
       
+      // Cache the fetched contacts
+      await storageHelpers.cacheContacts(response.phonebooks, page);
+      
       return { 
         response, 
         page,
         pendingContacts,
+        sortOrder,
         isOffline: false 
       };
     } catch (error) {
       const pendingContacts = await storageHelpers.getPendingContacts();
-      const cachedContacts = await AsyncStorage.getItem('cachedContacts');
-      let phonebooks = pendingContacts;
+      const { contacts: cachedContacts, page: cachedPage } = await storageHelpers.getCachedContacts();
       
-      if (cachedContacts) {
-        const parsed = JSON.parse(cachedContacts);
-        phonebooks = [...pendingContacts, ...parsed.filter((cached: { id: string; }) => 
-          !pendingContacts.some(pending => pending.id === cached.id)
-        )];
+      // Combine pending and cached contacts
+      let phonebooks = [...pendingContacts];
+      
+      if (cachedContacts.length > 0) {
+        // Filter out any cached contacts that are now in pending
+        const filteredCached = cachedContacts.filter(
+          cached => !pendingContacts.some(pending => pending.id === cached.id)
+        );
+        
+        // Calculate the start and end index for pagination
+        const startIndex = (page - 1) * limit;
+        const endIndex = startIndex + limit;
+        
+        // Sort all contacts
+        const allContacts = contactHelpers.sortContacts([...phonebooks, ...filteredCached], sortOrder);
+        
+        // Get the slice of contacts for the current page
+        phonebooks = allContacts.slice(startIndex, endIndex);
+        
+        return {
+          response: {
+            phonebooks,
+            total: allContacts.length,
+            page: page,
+            pages: Math.ceil(allContacts.length / limit)
+          },
+          page,
+          pendingContacts,
+          sortOrder,
+          isOffline: true
+        };
       }
       
+      // If no cached contacts, just return pending contacts
       return {
         response: {
           phonebooks,
@@ -149,6 +237,7 @@ export const fetchContacts = createAsyncThunk(
         },
         page: 1,
         pendingContacts,
+        sortOrder,
         isOffline: true
       };
     }
@@ -162,29 +251,38 @@ export const addContact = createAsyncThunk(
       const savedContact = await apiAddContact(contact as Contact);
       return { success: true, contact: savedContact, isOffline: false };
     } catch (error) {
+      // Get current state for sort order
+      const state = getState() as any;
+      const sortOrder = state.contacts.currentSortOrder;
+
       // Create a pending contact when offline
       const pendingContact = await contactHelpers.createPendingContact(contact);
-      await storageHelpers.addToPendingContacts(pendingContact);
+      await storageHelpers.addToPendingContacts(pendingContact, sortOrder);
       
       // Cache current contacts for offline use
-      const state = getState() as any;
       const currentContacts = state.contacts.phonebooks;
       await AsyncStorage.setItem('cachedContacts', JSON.stringify(currentContacts));
       
-      return { success: true, contact: pendingContact, isOffline: true };
+      return { success: true, contact: pendingContact, isOffline: true, sortOrder };
     }
   }
 );
 
 export const resendContact = createAsyncThunk(
   'contacts/resendContact',
-  async (contact: Contact, { rejectWithValue }) => {
+  async (contact: Contact, { getState, rejectWithValue }) => {
     try {
       const savedContact = await apiAddContact(contact);
       await storageHelpers.removePendingContact(contact.id);
+      
+      // Get current sort order from state
+      const state = getState() as any;
+      const sortOrder = state.contacts.currentSortOrder || 'asc';
+      
       return {
         pendingId: contact.id,
         savedContact: { ...savedContact, sent: true },
+        sortOrder
       };
     } catch (error) {
       return rejectWithValue('Failed to resend contact');
@@ -209,12 +307,26 @@ export const updateAvatar = createAsyncThunk(
             'Content-Type': 'multipart/form-data',
             Accept: 'application/json',
           },
+          transformResponse: [(data) => {
+            // Parse the response data
+            const parsedData = JSON.parse(data);
+            return parsedData;
+          }],
         }
       );
 
-      return { id: numericId, photo: response.data.photo };
-    } catch (error) {
-      return rejectWithValue('Failed to update avatar');
+      if (!response.data || !response.data.photo) {
+        throw new Error('Invalid response from server');
+      }
+
+      return { 
+        id: id, // Keep original string ID
+        photo: response.data.photo,
+        success: true
+      };
+    } catch (error: any) {
+      console.error('Avatar update error:', error);
+      return rejectWithValue(error.response?.data?.message || 'Failed to update avatar');
     }
   }
 );
@@ -244,12 +356,21 @@ export const updateContact = createAsyncThunk(
           name: filename,
         } as any);
 
-        await dispatch(updateAvatar({ id, formData })).unwrap();
+        try {
+          const avatarResult = await dispatch(updateAvatar({ id, formData })).unwrap();
+          if (avatarResult.success) {
+            updatedContact.photo = avatarResult.photo;
+          }
+        } catch (avatarError) {
+          console.error('Avatar update failed:', avatarError);
+          // Continue with contact update even if avatar update fails
+        }
       }
 
       return { success: true, contact: updatedContact };
-    } catch (error) {
-      return rejectWithValue('Failed to update contact');
+    } catch (error: any) {
+      console.error('Contact update error:', error);
+      return rejectWithValue(error.response?.data?.message || 'Failed to update contact');
     }
   }
 );
@@ -272,21 +393,24 @@ const contactsSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(fetchContacts.pending, (state) => {
-        state.loading = true;
+        if (state.phonebooks.length === 0) {
+          state.loading = true;
+        }
         state.error = null;
       })
       .addCase(fetchContacts.fulfilled, (state, action) => {
-        const { response, page, pendingContacts, isOffline } = action.payload;
+        const { response, page, pendingContacts, sortOrder, isOffline } = action.payload;
+        state.currentSortOrder = sortOrder;
         
         if (page === 1) {
           // For first page, combine and deduplicate contacts
           const allContacts = [...pendingContacts, ...response.phonebooks];
-          state.phonebooks = contactHelpers.deduplicateContacts(allContacts);
+          state.phonebooks = contactHelpers.deduplicateContacts(allContacts, sortOrder);
         } else {
           // For subsequent pages, add new unique contacts
           const currentIds = new Set(state.phonebooks.map(c => c.id));
           const newContacts = response.phonebooks.filter(c => !currentIds.has(c.id));
-          state.phonebooks = contactHelpers.deduplicateContacts([...state.phonebooks, ...newContacts]);
+          state.phonebooks = contactHelpers.deduplicateContacts([...state.phonebooks, ...newContacts], sortOrder);
         }
         
         // Update pagination info
@@ -307,13 +431,13 @@ const contactsSlice = createSlice({
         state.error = null;
       })
       .addCase(addContact.fulfilled, (state, action) => {
-        const { contact, isOffline } = action.payload;
+        const { contact, isOffline, sortOrder } = action.payload;
         
         // Remove any existing contact with the same ID
         state.phonebooks = state.phonebooks.filter(c => c.id !== contact.id);
         
-        // Add the new contact at the beginning
-        state.phonebooks.unshift(contact);
+        // Add the new contact and sort
+        state.phonebooks = contactHelpers.deduplicateContacts([...state.phonebooks, contact], sortOrder || state.currentSortOrder);
         state.total += 1;
         
         // Update offline state if needed
@@ -329,11 +453,11 @@ const contactsSlice = createSlice({
         state.error = action.error.message || 'Failed to add contact';
       })
       .addCase(resendContact.fulfilled, (state, action) => {
-        const { pendingId, savedContact } = action.payload;
-        const index = state.phonebooks.findIndex(contact => contact.id === pendingId);
-        if (index !== -1) {
-          state.phonebooks[index] = savedContact;
-        }
+        const { pendingId, savedContact, sortOrder } = action.payload;
+        // Remove the pending contact
+        state.phonebooks = state.phonebooks.filter(contact => contact.id !== pendingId);
+        // Add the saved contact and resort
+        state.phonebooks = contactHelpers.deduplicateContacts([...state.phonebooks, savedContact], sortOrder);
       })
       .addCase(resendContact.rejected, (state, action) => {
         state.error = action.payload as string;
@@ -344,37 +468,35 @@ const contactsSlice = createSlice({
       })
       .addCase(updateAvatar.fulfilled, (state, action) => {
         const { id, photo } = action.payload;
-        const contact = state.phonebooks.find(c => parseInt(c.id, 10) === id);
+        // Find contact by string ID
+        const contact = state.phonebooks.find(c => c.id === id);
         if (contact) {
           contact.photo = photo;
         }
         state.avatarLoading = false;
+        state.error = null;
       })
       .addCase(updateAvatar.rejected, (state, action) => {
         state.avatarLoading = false;
-        state.error = action.payload as string;
+        state.error = action.payload as string || 'Failed to update avatar';
       })
-      .addCase(updateContact.pending, (state) => {
-        state.loading = true;
+      .addCase(updateContact.pending, (state, action) => {
         state.error = null;
       })
       .addCase(updateContact.fulfilled, (state, action) => {
         const updatedContact = action.payload.contact;
-        const index = state.phonebooks.findIndex(contact => contact.id === updatedContact.id);
-        if (index !== -1) {
-          state.phonebooks[index] = {
-            ...state.phonebooks[index],
-            ...updatedContact,
-          };
-        }
-        state.loading = false;
+        // Remove the old contact
+        state.phonebooks = state.phonebooks.filter(contact => contact.id !== updatedContact.id);
+        // Add the updated contact and resort the list
+        state.phonebooks = contactHelpers.deduplicateContacts(
+          [...state.phonebooks, updatedContact],
+          state.currentSortOrder
+        );
       })
       .addCase(updateContact.rejected, (state, action) => {
-        state.loading = false;
         state.error = action.payload as string;
       })
       .addCase(removeContact.pending, (state) => {
-        state.loading = true;
         state.error = null;
       })
       .addCase(removeContact.fulfilled, (state, action) => {

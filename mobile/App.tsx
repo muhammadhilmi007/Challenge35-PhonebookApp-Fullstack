@@ -3,7 +3,7 @@ import { Provider } from 'react-redux';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
-import { AppRegistry, Platform, StyleSheet } from 'react-native';
+import { AppRegistry } from 'react-native';
 import HomeScreen from './src/screens/HomeScreen';
 import AddContactScreen from './src/screens/AddContactScreen';
 import EditContactScreen from './src/screens/EditContactScreen';

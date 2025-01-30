@@ -13,7 +13,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useContacts } from '../hooks/useContacts';
 import Loading from '../components/Loading';
 import { AddContactScreenNavigationProp } from '../types/navigation';
-import { DEFAULT_AVATAR } from '../config';
+import { DEFAULT_AVATAR } from '../services/api';
 
 interface Props {
   navigation: AddContactScreenNavigationProp;

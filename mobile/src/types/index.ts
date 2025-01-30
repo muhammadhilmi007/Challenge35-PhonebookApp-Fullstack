@@ -17,10 +17,13 @@ export interface ContactsResponse {
 
 export interface ContactCardProps {
   contact: Contact;
-  onEdit: () => void;
+  onEdit: (contact: Contact) => Promise<void>;
   onDelete: () => void;
   onAvatarPress: () => void;
   onResend?: () => void;
+  onStartEditing: () => void;
+  onStopEditing: () => void;
+  isEditing: boolean;
 }
 
 export interface SearchBarProps {

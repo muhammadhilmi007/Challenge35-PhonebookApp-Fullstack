@@ -1,141 +1,189 @@
-# Dokumentasi Alur Proses Aplikasi Phonebook
+Buatkan aplikasi berbasis Mobile yang bernama Phonebook dengan konsep PWA(Progressive Web App) , untuk menyimpan nama dan nomor telepon serta foto orangnya. aplikasi ini memiliki fitur BREADS (Browse, Read, Edit, Add, Delete,
+Sorting) serta dilengkapi pagination. disini kita akan membuat backend serta mobile yang dilengkapi test unit menggunakan mocha dan chai untuk backend dan jest.
 
-## Penjelasan Redux Toolkit
+Resful API
+-------------
+buatlah endpointnya terlebih dahulu untuk aplikasi phonebook kalian, yang terdiri dari:
 
-Redux Toolkit adalah library resmi untuk manajemen state dalam aplikasi React yang efisien. Ini menyederhanakan penggunaan Redux dengan mengurangi boilerplate code dan menyediakan best practices secara default.
+#1 READ, BROWSE, SORTING, PAGINATION
+-------------
+URL : http://localhost:3001/api/phonebooks
+method : GET
+Request : {
+    "page": 1,
+    "limit": 5,
+    "sortBy": "name",
+    "sortOrder": "asc",
+    "name": ""
+}
+Response : {
+    "phonebooks": [
+        {
+            "_id": 56,
+            "name": "John Doe",
+            "phone": "08123456789",
+            "photo": "https://via.placeholder.com/150",
+            "createdAt": "2018-10-10T00:00:00.000Z",
+            "updatedAt": "2018-10-10T00:00:00.000Z"
+        },
+        {
+            "_id": 54,
+            "name": "John Doe",
+            "phone": "08123456789",
+            "photo": "https://via.placeholder.com/150",
+            "createdAt": "2018-10-10T00:00:00.000Z",
+            "updatedAt": "2018-10-10T00:00:00.000Z"
+        }
+    ],
+    "page": 1,
+    "limit": 5,
+    "pages": 21,
+    "total": 6,
+}
 
-### createSlice
-`createSlice` adalah fungsi untuk membuat reducer, actions, dan state dalam satu tempat.
+CODE : 200
 
-Contoh penggunaan:
-```javascript
-const contactSlice = createSlice({
-  name: "contacts",
-  initialState: {
-    contacts: [],
-    loading: false
-  },
-  reducers: {
-    setContacts: (state, action) => {
-      state.contacts = action.payload;
-    }
-  }
-});
-```
+#2 ADD
+-------------
+URL : http://localhost:3001/api/phonebooks
+method : POST
+Request : {
+    "name": "John Doe",
+    "phone": "08123456789"
+}
+Response : {
+    "id": 56,
+    "name": "John Doe",
+    "phone": "08123456789",
+    "photo": null,
+    "createdAt": "2018-10-10T00:00:00.000Z",
+    "updatedAt": "2018-10-10T00:00:00.000Z"
+}
+CODE : 201
 
-### createAsyncThunk
-`createAsyncThunk` membantu menangani operasi asynchronous seperti API calls.
+#3 EDIT
+-------------
+URL : http://localhost:3001/api/phonebooks/:id
+method : PUT
+Request : {
+    "name": "John Doe",
+    "phone": "08123456789"
+}
+Response : {
+    "id": 56,
+    "name": "John Doe",
+    "phone": "08123456789",
+    "photo": null,
+    "createdAt": "2018-10-10T00:00:00.000Z",
+    "updatedAt": "2018-10-10T00:00:00.000Z"
+}
+CODE : 201
 
-Contoh penggunaan:
-```javascript
-export const loadContacts = createAsyncThunk(
-  "contacts/loadContacts",
-  async () => {
-    const response = await api.getContacts();
-    return response.data;
-  }
-);
-```
+#4 DELETE
+-------------
+URL : http://localhost:3001/api/phonebooks/:id
+method : DELETE
+Request : {
+    id: 56
+}
+Response : {
+    "id": 56,
+    "name": "John Doe",
+    "phone": "08123456789",
+    "photo": null,
+    "createdAt": "2018-10-10T00:00:00.000Z",
+    "updatedAt": "2018-10-10T00:00:00.000Z"
+}
 
-### configureStore
-`configureStore` mengatur store Redux dengan konfigurasi default yang optimal.
+CODE : 200
 
-Contoh penggunaan:
-```javascript
-const store = configureStore({
-  reducer: {
-    contacts: contactsReducer
-  }
-});
-```
+#5 UPDATE AVATAR
+-------------
+URL : http://localhost:3001/api/phonebooks/:id/avatar
+method : PUT
+Request : {
+    "photo": {avatar: file}
+}
+Response : {
+    "id": 56,
+    "name": "John Doe",
+    "phone": "08123456789",
+    "photo": "https://via.placeholder.com/150",
+    "createdAt": "2018-10-10T00:00:00.000Z",
+    "updatedAt": "2018-10-10T00:00:00.000Z"
+}
+CODE : 201
 
-### Selector
-Selector membantu mengambil dan memfilter data dari state Redux.
+Client
+-------------
 
-Contoh penggunaan:
-```javascript
-export const selectContacts = (state) => state.contacts.contacts;
-```
+Home Screen
+terdiri dari :
+1. Sorting Button
+2. Searching Input
+3. Adding Button
+4. List
+5. Resend Fitur
 
-## Alur Proses Detail
+Web View
+-------------
+[Gambar Web View]
+untuk tampilang web view, yang biasanya terlihat di browser kalau dibuka di monitor yang resolusinya cukup lebar dengan menggunakan resolusi minimal 1024px dan maksimal resolusi 1920px dan menggunakan layout responsive flex.
 
-### 1. Proses `npm start` di React
-1. Menjalankan perintah `npm start`
-2. Webpack dev server diinisialisasi
-3. Redux store dibuat dengan configureStore
-4. Provider membungkus aplikasi dengan store
-5. Aplikasi mulai dengan state awal yang kosong
+Tab View
+-------------
+[Gambar Tab View]
+untuk tampilang tab view, yang biasanya terlihat di sebuah layar pada device tab dengan menggunakan resolusi minimal 1024px dan maksimal resolusi 1920px dan menggunakan layout responsive flex.
 
-### 2. Proses Menampilkan Halaman Main Page
-1. Component MainPage dirender
-2. useSelector mengambil data kontak dari store
-3. useEffect memanggil action loadContacts
-4. Loading state ditampilkan selama fetch data
-5. Data kontak ditampilkan dalam tabel setelah berhasil diambil
+Mobile View
+-------------
+[Gambar Mobile View]
+untuk tampilang mobile view, yang biasanya terlihat di sebuah layar pada device smartphone dengan maksimal resolusi 600px dan menggunakan layout responsive flex.
 
-### 3. Proses Add Contact
-1. User mengisi form kontak baru
-2. Validasi form dijalankan
-3. addContact thunk dipanggil
-4. Jika offline:
-   - Contact disimpan di sessionStorage
-   - Status "pending" ditambahkan
-5. Jika online:
-   - Contact dikirim ke server
-   - Store diupdate dengan kontak baru
+Searching Mode  
+-------------
+[Gambar Searching Mode]
+input search ketika diketikkan keyword, otomatis list akan langsung berubah sesuai dengan keyword yang dimasukkan. gunakan event keyup untuk melakukan hal ini. contoh pada gambar, dimasukkan kata 'bu' sehingga sistem akan melakukan pencarian untuk kata yang dimasukkan di field name maupun phone, sehingga selain bisa dicari berdasarkan name bisa di cari juga berdasarkan phone, Gunakan OR untuk clause where di database postgresql.
 
-### 4. Proses Edit Contact
-1. Data kontak dimuat ke form
-2. User mengubah data
-3. updateContact thunk dipanggil
-4. State diperbarui dengan data terbaru
-5. UI diupdate otomatis lewat selector
+Sorting Mode
+-------------
+[Gambar Sorting Mode]
+Fitur Sorting dapat bekerja bersamaan dengan fitur searching. contoh pada gambar user sedang melakukan pencarian dengan keyword 'ra' disi kita melihat default sorting yakni ascending berdasarkan nama. dan apabila sorting untuk descending di klik, maka list akan mengurutkan berdasarkan nama dari belakang dan ingat fitur pencarian tetap berfungsi.
 
-### 5. Proses Upload Avatar
-1. User memilih file gambar
-2. File divalidasi (ukuran/tipe)
-3. updateAvatar thunk dipanggil
-4. Progress upload ditampilkan
-5. Avatar diperbarui setelah sukses
+Pagination List
+-------------
+[Gambar Pagination Mode]
+untuk fitur pagination gunakan addeventlistener scroll untuk melakukan load data halaman berikutnya. data halaman berikutnya langsung ditambahkan ke data sebelumnya. sehingga data akan bertambah ketika dilakukan scrolling sampai bawah.
 
-### 6. Proses Delete Contact
-1. Konfirmasi penghapusan
-2. deleteContact thunk dipanggil
-3. Contact dihapus dari store
-4. UI diupdate otomatis
-5. Feedback diberikan ke user
+Adding View
+-------------
+[Gambar Adding Mode]
+Fitur Add View akan muncul ketika tombol add yang ada di home screen sebelah searching input diklik, maka tampilan home screen akan berpindah ke tampilan add-view. gunakan Router di Frontend untuk mengatur perpindahan halaman. dan apabila user menekan tombol save maka data akan tersimpan dan tampilan akan kembali ke home screen.
 
-### 7. Proses Search Contact
-1. User mengetik kata kunci
-2. setSearch action dipanggil
-3. Selector memfilter kontak
-4. Hasil search ditampilkan real-time
-5. Pagination disesuaikan dengan hasil
+Fitur Resend
+-------------
+Fitur Resend dapat dilakukan ketika server dimatikan (PWA), yang mana ketika tampilan home screen muncul, server di matikan, dan user mengklik tombol add contact, dan muncul halaman add contact, terus buat contact baru dan user mengklik button save, maka data yang baru tersebut muncul bersama dengan data lainnya yang berdasarkan urutannya di halaman home screen dengan di simpan sementara di async storage dan pada data baru tersebut karena server mati, maka keluar button resend, dan ketika di klik button resend, ada alert bahwa server mati, dan ketika server dijalankan kembali, maka user mengklik button resend, dan data baru tersebut masuk ke database serta menghapus data sementara dari cache dan data button resend berganti menjadi button edit seperti semula.
 
-### 8. Proses Search, Sort, dan Edit
-1. Search dan sort bisa digabung
-2. State diupdate untuk kedua kriteria
-3. Selector menggabungkan filter
-4. Hasil ditampilkan sesuai kriteria
-5. Edit tetap berfungsi normal
+Editing View
+-------------
+[Gambar Editing Mode]
+Fitur edit dapat dilakukan langsung di list yang ada di home screen, dan bisa dilakukan perubahaan secara bersamaan.
 
-### 9. Proses Edit Simultan
-1. Optimistic update diterapkan
-2. Conflict detection saat save
-3. Error handling untuk konflik
-4. Retry mechanism tersedia
-5. UI selalu konsisten
+Deleting View
+-------------
+[Gambar Deleting Mode]
+Untuk Fitur penghapusan, ketika icon untuk menghapus diklik, pastikan konfirmasi penghapusan keluar terlebih dahulu, "Apakah anda yakin ingin menghapus data ini ?". dan apabila user menekan tombol delete maka data akan terhapus.
 
-### 10. Proses Search dan Sort
-1. Kombinasi filter diterapkan
-2. Sort diproses setelah search
-3. Selector memastikan efisiensi
-4. Pagination disesuaikan
-5. Cache hasil untuk performa
+Updating Avatar
+-------------
+[Gambar Updating Avatar Mode]
+Pada Gambar diatas, gambar avatar dapat di klik dan langsung menuju fitur untuk mengupload avatarnya, untuk versi mobilenya user dapat memilih file atau langsung melakukan selfie menggunakan smartphone, apabila avatar belum diupdate, maka akan ada gambar user sebagai defaultnya, apabila gambar telah diupdate, maka akan keluar gambar yang sesuai dengan data di database. contoh seperti gambar diatas.
 
-### 11. Proses Search dan Add Contact
-1. Search state dipertahankan
-2. Add contact tidak reset search
-3. New contact masuk ke filter
-4. UI diupdate sesuai filter
-5. Smooth transition antara views
+Test Unit
+-------------
+Buatlah beberapa test unit dengan menggunakan mocha dan chai untuk bagian backend, serta gunakan jest atau framework test lain yang kamu kuasai untuk unit testing frontend.
+
+Keywords Tech Stack
+-------------
+1. Backend (Express Generator(No View), Sequelize, Postgresql, Node JS, Nodemon, CORS, Dotenv, Multer, Mocha Chai)
+2. Mobile (React native Expo, React Navigation, React Redux-Toolkit, react-native-icons, react-intersection-observer, react-dom, react-scripts, axios, async storage, react-native-reanimated, searchparams, react-native-screens, react-native-svg, Typescript, react-native-web, react-native-webview, react-native-safe-area-context, redux-toolkit, react-native-gesture-handler)
