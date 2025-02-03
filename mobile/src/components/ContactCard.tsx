@@ -11,10 +11,21 @@ import {
   ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { ContactCardProps } from '../types';
+import { Contact } from '../store/contactsSlice';
 
-const API_URL = 'http://192.168.1.3:3001';
+const API_URL = 'http://192.168.0.119:3001';
 const DEFAULT_AVATAR = require('../../assets/default-avatar.png');
+
+interface ContactCardProps {
+  contact: Contact;
+  onEdit: (contact: Contact) => Promise<void>;
+  onDelete: () => void;
+  onAvatarPress: () => void;
+  onResend?: () => void;
+  onStartEditing: () => void;
+  onStopEditing: () => void;
+  isEditing: boolean;
+}
 
 const ContactCard: React.FC<ContactCardProps> = ({ 
   contact, 

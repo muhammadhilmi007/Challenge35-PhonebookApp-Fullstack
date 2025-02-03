@@ -6,10 +6,15 @@ import { StatusBar } from 'expo-status-bar';
 import { AppRegistry } from 'react-native';
 import HomeScreen from './src/screens/HomeScreen';
 import AddContactScreen from './src/screens/AddContactScreen';
-import EditContactScreen from './src/screens/EditContactScreen';
 import AvatarScreen from './src/screens/AvatarScreen';
-import { RootStackParamList } from './src/types/index';
+import { Contact } from './src/store/contactsSlice';
 import { store } from './src/store/store';
+
+export type RootStackParamList = {
+  Home: undefined;
+  AddContact: undefined;
+  Avatar: { contact: Contact };
+};
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -19,6 +24,7 @@ const App: React.FC = () => {
       <NavigationContainer>
         <StatusBar style="light" />
         <Stack.Navigator
+          initialRouteName="Home"
           screenOptions={{
             headerShown: false,
             contentStyle: { backgroundColor: '#fff' },
@@ -34,24 +40,6 @@ const App: React.FC = () => {
             options={{
               headerShown: true,
               title: 'Add New Contact',
-              headerStyle: {
-                backgroundColor: '#fff',
-              },
-              headerShadowVisible: false,
-              headerTitleStyle: {
-                color: '#000',
-                fontSize: 17,
-                fontWeight: '600',
-              },
-              headerTintColor: '#007AFF',
-            }}
-          />
-          <Stack.Screen 
-            name="EditContact" 
-            component={EditContactScreen}
-            options={{
-              headerShown: true,
-              title: 'Edit Contact',
               headerStyle: {
                 backgroundColor: '#fff',
               },

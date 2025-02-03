@@ -1,13 +1,20 @@
 import axios from 'axios';
-import { Contact, ContactsResponse } from '../types';
+import { Contact } from '../store/contactsSlice';
 
-export const API_URL = 'http://192.168.1.3:3001/api';
-export const API_BASE_URL = 'http://192.168.1.3:3001';
+export const API_URL = 'http://192.168.0.119:3001/api';
+export const API_BASE_URL = 'http://192.168.0.119:3001';
 export const DEFAULT_AVATAR = '/user-avatar.svg';
 export const IMAGE_QUALITY = 0.5;
 export const IMAGE_ASPECT: [number, number] = [1, 1];
 
 type SortOrder = 'asc' | 'desc';
+
+interface ContactsResponse {
+  phonebooks: Contact[];
+  total: number;
+  page: number;
+  pages: number;
+}
 
 const handleError = (operation: string) => (error: unknown) => {
   console.error(`Error ${operation}:`, error);

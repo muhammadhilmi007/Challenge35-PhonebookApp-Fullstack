@@ -10,16 +10,22 @@ import {
   Image,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { useContacts } from '../hooks/useContacts';
+import { useDispatch, useSelector } from 'react-redux';
+import { contactActions, contactSelectors } from '../store/contactsSlice';
 import Loading from '../components/Loading';
-import { AddContactScreenNavigationProp } from '../types/index';
+import { RootStackParamList } from '@/App';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
+export type AddContactScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'AddContact'>;
 
 interface Props {
   navigation: AddContactScreenNavigationProp;
 }
 
 const AddContactScreen: React.FC<Props> = ({ navigation }) => {
-  const { handleAddContact, loading, fetchContacts } = useContacts();
+  const dispatch = useDispatch();
+  const loading = useSelector(contactSelectors.selectLoading);
+  
   const [name, setName] = useState<string>('');
   const [phone, setPhone] = useState<string>('');
   const [avatar, setAvatar] = useState<string | null>(null);
@@ -36,7 +42,7 @@ const AddContactScreen: React.FC<Props> = ({ navigation }) => {
       navigation.goBack();
       
       // Add the contact in the background
-      const success = await handleAddContact({
+      const success = await contactActions.addContact(dispatch, {
         name: name.trim(),
         phone: phone.trim(),
         avatar: avatar || undefined,
@@ -47,6 +53,9 @@ const AddContactScreen: React.FC<Props> = ({ navigation }) => {
         setName('');
         setPhone('');
         setAvatar(null);
+        
+        // Refresh the contacts list
+        await contactActions.fetchContacts(dispatch, 1, 10, 'name', 'asc', '');
       } else {
         // If failed, show error
         Alert.alert('Error', 'Failed to save contact. Please try again.');

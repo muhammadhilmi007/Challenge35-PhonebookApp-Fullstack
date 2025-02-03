@@ -1,11 +1,13 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
+import { useCallback, useEffect } from 'react';
+import { Alert } from 'react-native';
+import debounce from 'lodash/debounce';
 import {
   getContacts,
   deleteContact,
   addContact as apiAddContact,
   updateContact as apiUpdateContact,
 } from "../services/api";
-import { Contact } from "../types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios"; // Import axios
 import { API_URL } from "../services/api"; // Import API_URL
@@ -15,6 +17,33 @@ import type { RootState, AppDispatch } from "./store";
 
 export const useAppDispatch = () => useDispatch<AppDispatch>();
 export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
+
+export function useDebounce<T>(callback: (value: T) => void, delay: number = 200) {
+  const debouncedCallback = useCallback(
+    debounce((value: T) => {
+      callback(value);
+    }, delay),
+    [callback, delay]
+  );
+
+  useEffect(() => {
+    return () => {
+      debouncedCallback.cancel();
+    };
+  }, [debouncedCallback]);
+
+  return debouncedCallback;
+}
+
+export interface Contact {
+  id: string;
+  name: string;
+  phone: string;
+  photo?: string;
+  avatar?: string;
+  status?: 'pending' | undefined;
+  sent?: boolean;
+}
 
 interface ContactsState {
   phonebooks: Contact[];
@@ -41,6 +70,20 @@ const initialState: ContactsState = {
 };
 
 type SortOrder = "asc" | "desc";
+
+export const sortContacts = (contacts: Contact[], sortOrder: SortOrder = 'asc'): Contact[] =>
+  [...contacts].sort((a, b) => {
+    const compareResult = a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+    return sortOrder === 'asc' ? compareResult : -compareResult;
+  });
+
+export const deduplicateContacts = (contacts: Contact[], sortOrder: SortOrder = 'asc'): Contact[] => {
+  const uniqueContacts = Array.from(
+    contacts.reduceRight((map, contact) => map.set(contact.id, contact), new Map<string, Contact>()).values()
+  );
+  return sortContacts(uniqueContacts, sortOrder);
+};
+
 
 // Storage Helper Functions
 const storageHelpers = {
@@ -608,5 +651,97 @@ const contactsSlice = createSlice({
       });
   },
 });
+
+// Export action creators for direct use with dispatch
+export const contactActions = {
+  fetchContacts: async (
+    dispatch: AppDispatch,
+    page: number = 1,
+    limit: number = 10,
+    sortBy: string = 'name',
+    sortOrder: SortOrder = 'asc',
+    search: string = ''
+  ): Promise<void> => {
+    try {
+      await dispatch(fetchContacts({ page, limit, sortBy, sortOrder, search })).unwrap();
+    } catch (err) {
+      console.error('Error in fetchContacts:', err);
+    }
+  },
+
+  deleteContact: async (
+    dispatch: AppDispatch,
+    id: string
+  ): Promise<boolean> => {
+    try {
+      await dispatch(removeContact(id)).unwrap();
+      return true;
+    } catch (err) {
+      console.error('Error in deleteContact:', err);
+      Alert.alert('Error', 'Failed to delete contact');
+      return false;
+    }
+  },
+
+  resendContact: async (
+    dispatch: AppDispatch,
+    contact: Contact
+  ): Promise<boolean> => {
+    try {
+      await dispatch(resendContact(contact)).unwrap();
+      Alert.alert('Success', 'Contact has been resent successfully');
+      return true;
+    } catch (err) {
+      console.error('Error in resendContact:', err);
+      Alert.alert('Error', 'Failed to resend contact');
+      return false;
+    }
+  },
+
+  updateContact: async (
+    dispatch: AppDispatch,
+    id: string,
+    contact: Partial<Contact>
+  ): Promise<boolean> => {
+    try {
+      await dispatch(updateContact({ id, contact })).unwrap();
+      return true;
+    } catch (err) {
+      console.error('Error in updateContact:', err);
+      Alert.alert('Error', 'Failed to update contact');
+      return false;
+    }
+  },
+
+  addContact: async (
+    dispatch: AppDispatch,
+    contact: Omit<Contact, 'id'>
+  ): Promise<boolean> => {
+    try {
+      const result = await dispatch(addContact(contact)).unwrap();
+      if (result.isOffline) {
+        Alert.alert('Offline Mode', 'Contact saved locally and will be synced when online');
+      }
+      return result.success;
+    } catch (err) {
+      console.error('Error in addContact:', err);
+      Alert.alert('Error', 'Failed to add contact');
+      return false;
+    }
+  },
+};
+
+// Export selectors for accessing state
+export const contactSelectors = {
+  selectContacts: (state: RootState) => ({
+    phonebooks: state.contacts.phonebooks,
+    total: state.contacts.total,
+    page: state.contacts.page,
+    pages: state.contacts.pages
+  }),
+  selectLoading: (state: RootState) => state.contacts.loading,
+  selectError: (state: RootState) => state.contacts.error,
+  selectIsOffline: (state: RootState) => state.contacts.isOffline,
+};
 
 export default contactsSlice.reducer;

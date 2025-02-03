@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
-  ScrollView,
+  FlatList,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -10,38 +10,39 @@ import {
   StatusBar,
   SafeAreaView,
   ActivityIndicator,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
   Alert,
 } from 'react-native';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faSortAlphaDown, faSortAlphaUp, faUserPlus, faCirclePlus } from '@fortawesome/free-solid-svg-icons';
+import { faUserPlus, faCirclePlus, faArrowDownZA, faArrowUpAZ } from '@fortawesome/free-solid-svg-icons';
 import ContactCard from '../components/ContactCard';
 import SearchBar from '../components/SearchBar';
 import Loading from '../components/Loading';
-import { useContacts, useDebounce } from '../hooks/useContacts';
+import { useDebounce, contactActions, contactSelectors } from '../store/contactsSlice';
 import { useFocusEffect } from '@react-navigation/native';
-import { HomeScreenNavigationProp } from '../types/index';
-import { Contact } from '../types';
-import contactHelpers from '../helpers/contactHelpers';
+import { RootStackParamList } from '@/App';
+import { Contact } from '../store/contactsSlice';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { sortContacts } from '../store/contactsSlice';
+import { useDispatch, useSelector } from 'react-redux';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const HEADER_HEIGHT = Platform.OS === 'ios' ? 90 : 95;
 const ICON_SIZE = Math.min(Math.max(SCREEN_WIDTH * 0.06, 24), 32);
 const ITEMS_PER_PAGE = 10;
 
+type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
+
 interface Props {
   navigation: HomeScreenNavigationProp;
 }
 
-interface ContactsResponse {
-  phonebooks: Contact[];
-  total: number;
-  page: number;
-  pages: number;
-}
-
 const HomeScreen: React.FC<Props> = ({ navigation }) => {
+  const dispatch = useDispatch();
+  const contacts = useSelector(contactSelectors.selectContacts);
+  const loading = useSelector(contactSelectors.selectLoading);
+  const error = useSelector(contactSelectors.selectError);
+  const isOffline = useSelector(contactSelectors.selectIsOffline);
+
   const [search, setSearch] = useState<string>('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [page, setPage] = useState<number>(1);
@@ -60,24 +61,13 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
     debouncedSearch(search);
   }, [search]);
 
-  const {
-    contacts,
-    loading,
-    error,
-    isOffline,
-    fetchContacts,
-    handleDeleteContact,
-    handleResendContact,
-    handleUpdateContact,
-  } = useContacts();
-
   // Initialize contacts and handle screen focus
   useFocusEffect(
     React.useCallback(() => {
       const loadData = async () => {
         try {
           if (!isInitialized) {
-            await fetchContacts(1, ITEMS_PER_PAGE, 'name', sortOrder, debouncedSearchValue);
+            await contactActions.fetchContacts(dispatch, 1, ITEMS_PER_PAGE, 'name', sortOrder, debouncedSearchValue);
             setIsInitialized(true);
           }
         } catch (err) {
@@ -89,7 +79,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
       };
 
       loadData();
-    }, [isInitialized, fetchContacts, debouncedSearchValue, sortOrder])
+    }, [isInitialized, dispatch, debouncedSearchValue, sortOrder])
   );
 
   // Effect for handling search and sort changes
@@ -97,52 +87,33 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
     if (isInitialized) {
       setPage(1);
       setHasMoreData(true);
-      fetchContacts(1, ITEMS_PER_PAGE, 'name', sortOrder, debouncedSearchValue);
+      contactActions.fetchContacts(dispatch, 1, ITEMS_PER_PAGE, 'name', sortOrder, debouncedSearchValue);
     }
-  }, [debouncedSearchValue, sortOrder, isInitialized]);
+  }, [debouncedSearchValue, sortOrder, isInitialized, dispatch]);
 
-  const isCloseToBottom = useCallback(({ layoutMeasurement, contentOffset, contentSize }: NativeScrollEvent): boolean => {
-    const paddingToBottom = 20;
-    return layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
-  }, []);
-
-  const handleLoadMore = useCallback(async (): Promise<void> => {
-    if (
-      isLoadingMore || 
-      loading || 
-      !contacts || 
-      !contacts.phonebooks || 
-      !hasMoreData ||
-      contacts.page >= contacts.pages
-    ) {
+  const handleLoadMore = useCallback(async () => {
+    if (!hasMoreData || isLoadingMore || loading || contacts.page >= contacts.pages) {
       return;
     }
 
     setIsLoadingMore(true);
     try {
-      const nextPage = page + 1;
-      await fetchContacts(nextPage, ITEMS_PER_PAGE, 'name', sortOrder, debouncedSearchValue);
-      setPage(nextPage);
-      
-      // Check if we have more data
-      if (nextPage >= contacts.pages) {
-        setHasMoreData(false);
-      }
+      await contactActions.fetchContacts(
+        dispatch,
+        page + 1,
+        ITEMS_PER_PAGE,
+        'name',
+        sortOrder,
+        debouncedSearchValue
+      );
+      setPage(prev => prev + 1);
+      setHasMoreData(contacts.page < contacts.pages);
     } catch (err) {
       console.error('Error loading more contacts:', err);
-      if (!isOffline) {
-        setHasMoreData(false);
-      }
     } finally {
       setIsLoadingMore(false);
     }
-  }, [isLoadingMore, loading, contacts, hasMoreData, page, fetchContacts, sortOrder, debouncedSearchValue, isOffline]);
-
-  const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>): void => {
-    if (isCloseToBottom(event.nativeEvent)) {
-      handleLoadMore();
-    }
-  }, [isCloseToBottom, handleLoadMore]);
+  }, [hasMoreData, isLoadingMore, loading, contacts.page, contacts.pages, page, sortOrder, debouncedSearchValue, dispatch]);
 
   const handleSortToggle = useCallback((): void => {
     setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
@@ -181,7 +152,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
         if (matchesSearch) {
           // If it matches, update it in the current list and sort
           const filteredContacts = contacts.phonebooks.filter(c => c.id !== contact.id);
-          const updatedPhonebooks = contactHelpers.sortContacts(
+          const updatedPhonebooks = sortContacts(
             [...filteredContacts, editedContact],
             sortOrder
           );
@@ -197,7 +168,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
       }
 
       // Make the API call
-      const success = await handleUpdateContact(contact.id, {
+      const success = await contactActions.updateContact(dispatch, contact.id, {
         name: contact.name,
         phone: contact.phone,
       });
@@ -212,7 +183,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
           if (contactMatchesSearch(contact, search)) {
             // Only revert if the original contact matched the search
             const filteredContacts = contacts.phonebooks.filter(c => c.id !== contact.id);
-            const revertedPhonebooks = contactHelpers.sortContacts(
+            const revertedPhonebooks = sortContacts(
               [...filteredContacts, contact],
               sortOrder
             );
@@ -234,34 +205,80 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
     navigation.navigate('Avatar', { contact });
   };
 
-  const renderContactList = useCallback(() => {
-    if (!contacts?.phonebooks?.length) {
-      return (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>
-            {search ? 'No contacts found' : 'No contacts yet'}
+  const handleDelete = useCallback(async (id: string) => {
+    const success = await contactActions.deleteContact(dispatch, id);
+    if (success) {
+      contactActions.fetchContacts(dispatch, 1, ITEMS_PER_PAGE, 'name', sortOrder, debouncedSearchValue);
+    }
+  }, [dispatch, sortOrder, debouncedSearchValue]);
+
+  const handleResend = useCallback(async (contact: Contact) => {
+    const success = await contactActions.resendContact(dispatch, contact);
+    if (success) {
+      contactActions.fetchContacts(dispatch, 1, ITEMS_PER_PAGE, 'name', sortOrder, debouncedSearchValue);
+    }
+  }, [dispatch, sortOrder, debouncedSearchValue]);
+
+  const renderEmptyList = useCallback(() => {
+    return (
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyText}>
+          {search ? 'No contacts found' : 'No contacts yet'}
+        </Text>
+        {isOffline && (
+          <Text style={styles.offlineText}>
+            You are currently offline
           </Text>
-          {isOffline && (
-            <Text style={styles.offlineText}>
-              You are currently offline
-            </Text>
-          )}
+        )}
+      </View>
+    );
+  }, [search, isOffline]);
+
+  const renderFooter = useCallback(() => {
+    if (isLoadingMore) {
+      return (
+        <View style={styles.loadingMore}>
+          <ActivityIndicator size="small" color="#b08968" />
         </View>
       );
+    }
+
+    if (!hasMoreData && contacts.phonebooks.length > 0) {
+      return (
+        <Text style={styles.endOfListText}>
+          {isOffline ? 'Offline mode - showing cached contacts' : 'No more contacts to load'}
+        </Text>
+      );
+    }
+
+    return null;
+  }, [isLoadingMore, hasMoreData, contacts.phonebooks.length, isOffline]);
+
+  const renderItem = useCallback(({ item: contact }: { item: Contact }) => {
+    return (
+      <ContactCard
+        key={`contact_${contact.id}`}
+        contact={contact}
+        onEdit={handleEditContact}
+        onDelete={() => handleDelete(contact.id)}
+        onAvatarPress={() => handleAvatarPress(contact)}
+        onResend={contact.status === 'pending' ? () => handleResend(contact) : undefined}
+        onStartEditing={() => handleStartEditing(contact.id)}
+        onStopEditing={() => handleStopEditing(contact.id)}
+        isEditing={editingContactIds.has(contact.id)}
+      />
+    );
+  }, [handleEditContact, handleDelete, handleAvatarPress, handleResend, editingContactIds]);
+
+  const getFilteredContacts = useCallback(() => {
+    if (!contacts?.phonebooks?.length) {
+      return [];
     }
 
     // Filter contacts that match the search criteria
     const filteredContacts = contacts.phonebooks.filter(contact => 
       contactMatchesSearch(contact, search)
     );
-
-    if (filteredContacts.length === 0) {
-      return (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No contacts found</Text>
-        </View>
-      );
-    }
 
     // Create a map to store unique contacts by ID
     const uniqueContacts = new Map();
@@ -273,34 +290,8 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
       }
     });
 
-    return (
-      <>
-        {Array.from(uniqueContacts.values()).map((contact: Contact) => (
-          <ContactCard
-            key={`contact_${contact.id}`}
-            contact={contact}
-            onEdit={handleEditContact}
-            onDelete={() => handleDeleteContact(contact.id)}
-            onAvatarPress={() => handleAvatarPress(contact)}
-            onResend={contact.status === 'pending' ? () => handleResendContact(contact) : undefined}
-            onStartEditing={() => handleStartEditing(contact.id)}
-            onStopEditing={() => handleStopEditing(contact.id)}
-            isEditing={editingContactIds.has(contact.id)}
-          />
-        ))}
-        {isLoadingMore && (
-          <View style={styles.loadingMore}>
-            <ActivityIndicator size="small" color="#b08968" />
-          </View>
-        )}
-        {!hasMoreData && filteredContacts.length > 0 && (
-          <Text style={styles.endOfListText}>
-            {isOffline ? 'Offline mode - showing cached contacts' : 'No more contacts to load'}
-          </Text>
-        )}
-      </>
-    );
-  }, [contacts, isLoadingMore, hasMoreData, isOffline, search, editingContactIds, handleDeleteContact, handleResendContact, contactMatchesSearch]);
+    return Array.from(uniqueContacts.values());
+  }, [contacts, search, contactMatchesSearch]);
 
   if (!isInitialized || (loading && !isLoadingMore)) {
     return <Loading />;
@@ -317,7 +308,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
               onPress={handleSortToggle}
             >
               <FontAwesomeIcon
-                icon={sortOrder === 'asc' ? faSortAlphaDown : faSortAlphaUp}
+                icon={sortOrder === 'asc' ? faArrowDownZA : faArrowUpAZ}
                 size={ICON_SIZE}
                 color="#fff"
               />
@@ -328,7 +319,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
             onChangeText={setSearch}
             onSubmit={() => {
               if (search.trim()) {
-                fetchContacts(1, ITEMS_PER_PAGE, 'name', sortOrder, debouncedSearchValue);
+                contactActions.fetchContacts(dispatch, 1, ITEMS_PER_PAGE, 'name', sortOrder, debouncedSearchValue);
               }
             }}
             containerStyle={styles.searchBar}
@@ -355,13 +346,19 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={styles.errorText}>{error}</Text>
           </View>
         ) : (
-          <ScrollView
-            style={styles.scrollView}
-            onScroll={handleScroll}
-            scrollEventThrottle={16}
-          >
-            {renderContactList()}
-          </ScrollView>
+          <FlatList
+            data={getFilteredContacts()}
+            renderItem={renderItem}
+            keyExtractor={(item) => `contact_${item.id}`}
+            contentContainerStyle={styles.listContent}
+            ListEmptyComponent={renderEmptyList}
+            ListFooterComponent={renderFooter}
+            onEndReached={handleLoadMore}
+            onEndReachedThreshold={0.5}
+            maxToRenderPerBatch={10}
+            windowSize={10}
+            removeClippedSubviews={true}
+          />
         )}
       </View>
     </SafeAreaView>
@@ -412,8 +409,8 @@ const styles = StyleSheet.create({
     marginTop: 10,
     flex: 1,
   },
-  scrollView: {
-    flex: 1,
+  listContent: {
+    flexGrow: 1,
   },
   errorContainer: {
     flex: 1,

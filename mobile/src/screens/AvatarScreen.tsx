@@ -14,10 +14,16 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
-import { AvatarScreenNavigationProp, AvatarScreenRouteProp } from '../types/index';
 import Loading from '../components/Loading';
-import { useContacts } from '../hooks/useContacts';
+import { useDispatch, useSelector } from 'react-redux';
+import { contactActions, contactSelectors } from '../store/contactsSlice';
 import { API_BASE_URL, DEFAULT_AVATAR as DEFAULT_AVATAR_PATH, IMAGE_QUALITY, IMAGE_ASPECT } from '../services/api';
+import { RootStackParamList } from '@/App';
+import { RouteProp } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
+export type AvatarScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Avatar'>;
+export type AvatarScreenRouteProp = RouteProp<RootStackParamList, 'Avatar'>;
 
 const DEFAULT_AVATAR = require('../../assets/default-avatar.png');
 
@@ -28,9 +34,11 @@ interface Props {
 
 const AvatarScreen: React.FC<Props> = ({ route, navigation }) => {
   const { contact } = route.params;
-  const { handleUpdateContact, loading: updateLoading } = useContacts();
+  const dispatch = useDispatch();
+  const loading = useSelector(contactSelectors.selectLoading);
+  
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [localLoading, setLocalLoading] = useState<boolean>(false);
 
   const getAvatarSource = (): ImageSourcePropType => {
     if (selectedImage) {
@@ -57,7 +65,7 @@ const AvatarScreen: React.FC<Props> = ({ route, navigation }) => {
         return;
       }
 
-      setLoading(true);
+      setLocalLoading(true);
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
@@ -72,7 +80,7 @@ const AvatarScreen: React.FC<Props> = ({ route, navigation }) => {
       console.error('Error picking image:', error);
       Alert.alert('Error', 'Failed to pick image. Please try again.');
     } finally {
-      setLoading(false);
+      setLocalLoading(false);
     }
   };
 
@@ -84,7 +92,7 @@ const AvatarScreen: React.FC<Props> = ({ route, navigation }) => {
         return;
       }
 
-      setLoading(true);
+      setLocalLoading(true);
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
         aspect: IMAGE_ASPECT,
@@ -98,7 +106,7 @@ const AvatarScreen: React.FC<Props> = ({ route, navigation }) => {
       console.error('Error taking photo:', error);
       Alert.alert('Error', 'Failed to take photo. Please try again.');
     } finally {
-      setLoading(false);
+      setLocalLoading(false);
     }
   };
 
@@ -109,18 +117,12 @@ const AvatarScreen: React.FC<Props> = ({ route, navigation }) => {
     }
 
     try {
-      const updatedContact = {
-        ...contact,
+      const success = await contactActions.updateContact(dispatch, contact.id, {
         avatar: selectedImage,
-      };
-      
-      // Remove properties that shouldn't be sent to the API
-      delete updatedContact.status;
-      delete updatedContact.sent;
-      
-      const success = await handleUpdateContact(contact.id, updatedContact);
-      
+      });
+
       if (success) {
+        await contactActions.fetchContacts(dispatch, 1, 10, 'name', 'asc', '');
         navigation.goBack();
       }
     } catch (error) {
@@ -137,7 +139,7 @@ const AvatarScreen: React.FC<Props> = ({ route, navigation }) => {
         </TouchableOpacity>
         {selectedImage && (
           <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
-            {updateLoading ? (
+            {loading ? (
               <ActivityIndicator color="#fff" size="small" />
             ) : (
               <Text style={styles.saveButtonText}>Save</Text>
@@ -150,7 +152,7 @@ const AvatarScreen: React.FC<Props> = ({ route, navigation }) => {
         <Image source={getAvatarSource()} style={styles.image} resizeMode="contain" />
       </View>
 
-      {loading ? (
+      {localLoading ? (
         <Loading />
       ) : (
         <BlurView intensity={100} tint="dark" style={styles.actions}>
